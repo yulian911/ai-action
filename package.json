@@ -1,0 +1,26 @@
+{
+  "name": "ai-action",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "yulian911",
+  "type": "commonjs",
+  "main": "dist/use-ai.js",
+  "scripts": {
+    "build": "npx rolldown src/use-ai.js --file dist/use-ai.js"
+  },
+  "keywords": [
+    "ai",
+    "generative-ai",
+    "gemini",
+    "github",
+    "actions"
+  ],
+
+  "devDependencies": {
+    "dotenv": "16.5.0"
+  },
+  "dependencies": {
+    "@google/genai": "0.9.0"
+  }
+}

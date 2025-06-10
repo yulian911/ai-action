@@ -1,0 +1,23 @@
+# action.yml
+name: AI Reviewer
+description: Comment from AI
+
+# GitHub Marketplace - Branding (Opcjonalne)
+branding:
+  icon: "terminal"
+  color: "black"
+
+# Parametry wejściowe
+inputs:
+  GOOGLE_API_KEY:
+    description: "Google AI Studio API Key"
+
+# Kroki danej akcji - wykorzystywane w scenariuszu konsumenta
+runs:
+  using: "composite"
+  steps:
+    - name: Run action
+      run: node ${GITHUB_ACTION_PATH}/dist/use-ai.js
+      shell: bash
+      env:
+        GOOGLE_API_KEY: ${{ inputs.GOOGLE_API_KEY }}
