@@ -2,22 +2,24 @@
 name: AI Reviewer
 description: Comment from AI
 
-# GitHub Marketplace - Branding (Opcjonalne)
+# GitHub Marketplace - Branding
 branding:
   icon: "terminal"
   color: "black"
 
-# Parametry wejściowe
+# Input parameters
 inputs:
   GOOGLE_API_KEY:
     description: "Google AI Studio API Key"
 
-# Kroki danej akcji - wykorzystywane w scenariuszu konsumenta
+# Action steps
 runs:
   using: "composite"
   steps:
-    - name: Run action
-      run: node ${GITHUB_ACTION_PATH}/dist/use-ai.js
+    - name: Get PR diff, run AI review, and comment
+      id: ai-review
       shell: bash
+      run: node ${GITHUB_ACTION_PATH}/dist/index.cjs
       env:
         GOOGLE_API_KEY: ${{ inputs.GOOGLE_API_KEY }}
+        GITHUB_TOKEN: ${{ github.token }}
