@@ -4,7 +4,6 @@
   "description": "",
   "license": "ISC",
   "author": "yulian911",
-  "type": "commonjs",
   "main": "dist/use-ai.js",
   "scripts": {
     "build": "npx rolldown src/use-ai.js --file dist/use-ai.js"

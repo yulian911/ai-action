@@ -1,14 +1,10 @@
-//#region rolldown:runtime
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __esm = (fn, res) => function() {
-	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-};
-var __commonJS = (cb, mod) => function() {
-	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-};
-
-//#endregion
 //#region node_modules/@google/genai/dist/web/index.mjs
+/**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+var BaseModule = class {};
 function formatMap(templateString, valueMap) {
 	const regex = /\{([^}]+)\}/g;
 	return templateString.replace(regex, (match, key) => {
@@ -726,6 +722,946 @@ function listCachedContentsResponseFromVertex(apiClient, fromObject) {
 	else setValueByPath(toObject, ["cachedContents"], fromCachedContents);
 	return toObject;
 }
+/**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+/**
+* Pagers for the GenAI List APIs.
+*/
+var PagedItem;
+(function(PagedItem$1) {
+	PagedItem$1["PAGED_ITEM_BATCH_JOBS"] = "batchJobs";
+	PagedItem$1["PAGED_ITEM_MODELS"] = "models";
+	PagedItem$1["PAGED_ITEM_TUNING_JOBS"] = "tuningJobs";
+	PagedItem$1["PAGED_ITEM_FILES"] = "files";
+	PagedItem$1["PAGED_ITEM_CACHED_CONTENTS"] = "cachedContents";
+})(PagedItem || (PagedItem = {}));
+/**
+* Pager class for iterating through paginated results.
+*/
+var Pager = class {
+	constructor(name, request, response, params) {
+		this.pageInternal = [];
+		this.paramsInternal = {};
+		this.requestInternal = request;
+		this.init(name, response, params);
+	}
+	init(name, response, params) {
+		var _a, _b;
+		this.nameInternal = name;
+		this.pageInternal = response[this.nameInternal] || [];
+		this.idxInternal = 0;
+		let requestParams = { config: {} };
+		if (!params) requestParams = { config: {} };
+		else if (typeof params === "object") requestParams = Object.assign({}, params);
+		else requestParams = params;
+		if (requestParams["config"]) requestParams["config"]["pageToken"] = response["nextPageToken"];
+		this.paramsInternal = requestParams;
+		this.pageInternalSize = (_b = (_a = requestParams["config"]) === null || _a === void 0 ? void 0 : _a["pageSize"]) !== null && _b !== void 0 ? _b : this.pageInternal.length;
+	}
+	initNextPage(response) {
+		this.init(this.nameInternal, response, this.paramsInternal);
+	}
+	/**
+	* Returns the current page, which is a list of items.
+	*
+	* @remarks
+	* The first page is retrieved when the pager is created. The returned list of
+	* items could be a subset of the entire list.
+	*/
+	get page() {
+		return this.pageInternal;
+	}
+	/**
+	* Returns the type of paged item (for example, ``batch_jobs``).
+	*/
+	get name() {
+		return this.nameInternal;
+	}
+	/**
+	* Returns the length of the page fetched each time by this pager.
+	*
+	* @remarks
+	* The number of items in the page is less than or equal to the page length.
+	*/
+	get pageSize() {
+		return this.pageInternalSize;
+	}
+	/**
+	* Returns the parameters when making the API request for the next page.
+	*
+	* @remarks
+	* Parameters contain a set of optional configs that can be
+	* used to customize the API request. For example, the `pageToken` parameter
+	* contains the token to request the next page.
+	*/
+	get params() {
+		return this.paramsInternal;
+	}
+	/**
+	* Returns the total number of items in the current page.
+	*/
+	get pageLength() {
+		return this.pageInternal.length;
+	}
+	/**
+	* Returns the item at the given index.
+	*/
+	getItem(index) {
+		return this.pageInternal[index];
+	}
+	/**
+	* Returns an async iterator that support iterating through all items
+	* retrieved from the API.
+	*
+	* @remarks
+	* The iterator will automatically fetch the next page if there are more items
+	* to fetch from the API.
+	*
+	* @example
+	*
+	* ```ts
+	* const pager = await ai.files.list({config: {pageSize: 10}});
+	* for await (const file of pager) {
+	*   console.log(file.name);
+	* }
+	* ```
+	*/
+	[Symbol.asyncIterator]() {
+		return {
+			next: async () => {
+				if (this.idxInternal >= this.pageLength) if (this.hasNextPage()) await this.nextPage();
+				else return {
+					value: void 0,
+					done: true
+				};
+				const item = this.getItem(this.idxInternal);
+				this.idxInternal += 1;
+				return {
+					value: item,
+					done: false
+				};
+			},
+			return: async () => {
+				return {
+					value: void 0,
+					done: true
+				};
+			}
+		};
+	}
+	/**
+	* Fetches the next page of items. This makes a new API request.
+	*
+	* @throws {Error} If there are no more pages to fetch.
+	*
+	* @example
+	*
+	* ```ts
+	* const pager = await ai.files.list({config: {pageSize: 10}});
+	* let page = pager.page;
+	* while (true) {
+	*   for (const file of page) {
+	*     console.log(file.name);
+	*   }
+	*   if (!pager.hasNextPage()) {
+	*     break;
+	*   }
+	*   page = await pager.nextPage();
+	* }
+	* ```
+	*/
+	async nextPage() {
+		if (!this.hasNextPage()) throw new Error("No more pages to fetch.");
+		const response = await this.requestInternal(this.params);
+		this.initNextPage(response);
+		return this.page;
+	}
+	/**
+	* Returns true if there are more pages to fetch from the API.
+	*/
+	hasNextPage() {
+		var _a;
+		if (((_a = this.params["config"]) === null || _a === void 0 ? void 0 : _a["pageToken"]) !== void 0) return true;
+		return false;
+	}
+};
+/**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+/** Required. Outcome of the code execution. */
+var Outcome;
+(function(Outcome$1) {
+	Outcome$1["OUTCOME_UNSPECIFIED"] = "OUTCOME_UNSPECIFIED";
+	Outcome$1["OUTCOME_OK"] = "OUTCOME_OK";
+	Outcome$1["OUTCOME_FAILED"] = "OUTCOME_FAILED";
+	Outcome$1["OUTCOME_DEADLINE_EXCEEDED"] = "OUTCOME_DEADLINE_EXCEEDED";
+})(Outcome || (Outcome = {}));
+/** Required. Programming language of the `code`. */
+var Language;
+(function(Language$1) {
+	Language$1["LANGUAGE_UNSPECIFIED"] = "LANGUAGE_UNSPECIFIED";
+	Language$1["PYTHON"] = "PYTHON";
+})(Language || (Language = {}));
+/** Optional. The type of the data. */
+var Type;
+(function(Type$1) {
+	Type$1["TYPE_UNSPECIFIED"] = "TYPE_UNSPECIFIED";
+	Type$1["STRING"] = "STRING";
+	Type$1["NUMBER"] = "NUMBER";
+	Type$1["INTEGER"] = "INTEGER";
+	Type$1["BOOLEAN"] = "BOOLEAN";
+	Type$1["ARRAY"] = "ARRAY";
+	Type$1["OBJECT"] = "OBJECT";
+})(Type || (Type = {}));
+/** Required. Harm category. */
+var HarmCategory;
+(function(HarmCategory$1) {
+	HarmCategory$1["HARM_CATEGORY_UNSPECIFIED"] = "HARM_CATEGORY_UNSPECIFIED";
+	HarmCategory$1["HARM_CATEGORY_HATE_SPEECH"] = "HARM_CATEGORY_HATE_SPEECH";
+	HarmCategory$1["HARM_CATEGORY_DANGEROUS_CONTENT"] = "HARM_CATEGORY_DANGEROUS_CONTENT";
+	HarmCategory$1["HARM_CATEGORY_HARASSMENT"] = "HARM_CATEGORY_HARASSMENT";
+	HarmCategory$1["HARM_CATEGORY_SEXUALLY_EXPLICIT"] = "HARM_CATEGORY_SEXUALLY_EXPLICIT";
+	HarmCategory$1["HARM_CATEGORY_CIVIC_INTEGRITY"] = "HARM_CATEGORY_CIVIC_INTEGRITY";
+})(HarmCategory || (HarmCategory = {}));
+/** Optional. Specify if the threshold is used for probability or severity score. If not specified, the threshold is used for probability score. */
+var HarmBlockMethod;
+(function(HarmBlockMethod$1) {
+	HarmBlockMethod$1["HARM_BLOCK_METHOD_UNSPECIFIED"] = "HARM_BLOCK_METHOD_UNSPECIFIED";
+	HarmBlockMethod$1["SEVERITY"] = "SEVERITY";
+	HarmBlockMethod$1["PROBABILITY"] = "PROBABILITY";
+})(HarmBlockMethod || (HarmBlockMethod = {}));
+/** Required. The harm block threshold. */
+var HarmBlockThreshold;
+(function(HarmBlockThreshold$1) {
+	HarmBlockThreshold$1["HARM_BLOCK_THRESHOLD_UNSPECIFIED"] = "HARM_BLOCK_THRESHOLD_UNSPECIFIED";
+	HarmBlockThreshold$1["BLOCK_LOW_AND_ABOVE"] = "BLOCK_LOW_AND_ABOVE";
+	HarmBlockThreshold$1["BLOCK_MEDIUM_AND_ABOVE"] = "BLOCK_MEDIUM_AND_ABOVE";
+	HarmBlockThreshold$1["BLOCK_ONLY_HIGH"] = "BLOCK_ONLY_HIGH";
+	HarmBlockThreshold$1["BLOCK_NONE"] = "BLOCK_NONE";
+	HarmBlockThreshold$1["OFF"] = "OFF";
+})(HarmBlockThreshold || (HarmBlockThreshold = {}));
+/** The mode of the predictor to be used in dynamic retrieval. */
+var Mode;
+(function(Mode$1) {
+	Mode$1["MODE_UNSPECIFIED"] = "MODE_UNSPECIFIED";
+	Mode$1["MODE_DYNAMIC"] = "MODE_DYNAMIC";
+})(Mode || (Mode = {}));
+/** Output only. The reason why the model stopped generating tokens.
+
+If empty, the model has not stopped generating the tokens.
+*/
+var FinishReason;
+(function(FinishReason$1) {
+	FinishReason$1["FINISH_REASON_UNSPECIFIED"] = "FINISH_REASON_UNSPECIFIED";
+	FinishReason$1["STOP"] = "STOP";
+	FinishReason$1["MAX_TOKENS"] = "MAX_TOKENS";
+	FinishReason$1["SAFETY"] = "SAFETY";
+	FinishReason$1["RECITATION"] = "RECITATION";
+	FinishReason$1["OTHER"] = "OTHER";
+	FinishReason$1["BLOCKLIST"] = "BLOCKLIST";
+	FinishReason$1["PROHIBITED_CONTENT"] = "PROHIBITED_CONTENT";
+	FinishReason$1["SPII"] = "SPII";
+	FinishReason$1["MALFORMED_FUNCTION_CALL"] = "MALFORMED_FUNCTION_CALL";
+	FinishReason$1["IMAGE_SAFETY"] = "IMAGE_SAFETY";
+})(FinishReason || (FinishReason = {}));
+/** Output only. Harm probability levels in the content. */
+var HarmProbability;
+(function(HarmProbability$1) {
+	HarmProbability$1["HARM_PROBABILITY_UNSPECIFIED"] = "HARM_PROBABILITY_UNSPECIFIED";
+	HarmProbability$1["NEGLIGIBLE"] = "NEGLIGIBLE";
+	HarmProbability$1["LOW"] = "LOW";
+	HarmProbability$1["MEDIUM"] = "MEDIUM";
+	HarmProbability$1["HIGH"] = "HIGH";
+})(HarmProbability || (HarmProbability = {}));
+/** Output only. Harm severity levels in the content. */
+var HarmSeverity;
+(function(HarmSeverity$1) {
+	HarmSeverity$1["HARM_SEVERITY_UNSPECIFIED"] = "HARM_SEVERITY_UNSPECIFIED";
+	HarmSeverity$1["HARM_SEVERITY_NEGLIGIBLE"] = "HARM_SEVERITY_NEGLIGIBLE";
+	HarmSeverity$1["HARM_SEVERITY_LOW"] = "HARM_SEVERITY_LOW";
+	HarmSeverity$1["HARM_SEVERITY_MEDIUM"] = "HARM_SEVERITY_MEDIUM";
+	HarmSeverity$1["HARM_SEVERITY_HIGH"] = "HARM_SEVERITY_HIGH";
+})(HarmSeverity || (HarmSeverity = {}));
+/** Output only. Blocked reason. */
+var BlockedReason;
+(function(BlockedReason$1) {
+	BlockedReason$1["BLOCKED_REASON_UNSPECIFIED"] = "BLOCKED_REASON_UNSPECIFIED";
+	BlockedReason$1["SAFETY"] = "SAFETY";
+	BlockedReason$1["OTHER"] = "OTHER";
+	BlockedReason$1["BLOCKLIST"] = "BLOCKLIST";
+	BlockedReason$1["PROHIBITED_CONTENT"] = "PROHIBITED_CONTENT";
+})(BlockedReason || (BlockedReason = {}));
+/** Output only. Traffic type. This shows whether a request consumes Pay-As-You-Go or Provisioned Throughput quota. */
+var TrafficType;
+(function(TrafficType$1) {
+	TrafficType$1["TRAFFIC_TYPE_UNSPECIFIED"] = "TRAFFIC_TYPE_UNSPECIFIED";
+	TrafficType$1["ON_DEMAND"] = "ON_DEMAND";
+	TrafficType$1["PROVISIONED_THROUGHPUT"] = "PROVISIONED_THROUGHPUT";
+})(TrafficType || (TrafficType = {}));
+/** Server content modalities. */
+var Modality;
+(function(Modality$1) {
+	Modality$1["MODALITY_UNSPECIFIED"] = "MODALITY_UNSPECIFIED";
+	Modality$1["TEXT"] = "TEXT";
+	Modality$1["IMAGE"] = "IMAGE";
+	Modality$1["AUDIO"] = "AUDIO";
+})(Modality || (Modality = {}));
+/** The media resolution to use. */
+var MediaResolution;
+(function(MediaResolution$1) {
+	MediaResolution$1["MEDIA_RESOLUTION_UNSPECIFIED"] = "MEDIA_RESOLUTION_UNSPECIFIED";
+	MediaResolution$1["MEDIA_RESOLUTION_LOW"] = "MEDIA_RESOLUTION_LOW";
+	MediaResolution$1["MEDIA_RESOLUTION_MEDIUM"] = "MEDIA_RESOLUTION_MEDIUM";
+	MediaResolution$1["MEDIA_RESOLUTION_HIGH"] = "MEDIA_RESOLUTION_HIGH";
+})(MediaResolution || (MediaResolution = {}));
+/** Options for feature selection preference. */
+var FeatureSelectionPreference;
+(function(FeatureSelectionPreference$1) {
+	FeatureSelectionPreference$1["FEATURE_SELECTION_PREFERENCE_UNSPECIFIED"] = "FEATURE_SELECTION_PREFERENCE_UNSPECIFIED";
+	FeatureSelectionPreference$1["PRIORITIZE_QUALITY"] = "PRIORITIZE_QUALITY";
+	FeatureSelectionPreference$1["BALANCED"] = "BALANCED";
+	FeatureSelectionPreference$1["PRIORITIZE_COST"] = "PRIORITIZE_COST";
+})(FeatureSelectionPreference || (FeatureSelectionPreference = {}));
+/** Config for the dynamic retrieval config mode. */
+var DynamicRetrievalConfigMode;
+(function(DynamicRetrievalConfigMode$1) {
+	DynamicRetrievalConfigMode$1["MODE_UNSPECIFIED"] = "MODE_UNSPECIFIED";
+	DynamicRetrievalConfigMode$1["MODE_DYNAMIC"] = "MODE_DYNAMIC";
+})(DynamicRetrievalConfigMode || (DynamicRetrievalConfigMode = {}));
+/** Config for the function calling config mode. */
+var FunctionCallingConfigMode;
+(function(FunctionCallingConfigMode$1) {
+	FunctionCallingConfigMode$1["MODE_UNSPECIFIED"] = "MODE_UNSPECIFIED";
+	FunctionCallingConfigMode$1["AUTO"] = "AUTO";
+	FunctionCallingConfigMode$1["ANY"] = "ANY";
+	FunctionCallingConfigMode$1["NONE"] = "NONE";
+})(FunctionCallingConfigMode || (FunctionCallingConfigMode = {}));
+/** Enum that controls the safety filter level for objectionable content. */
+var SafetyFilterLevel;
+(function(SafetyFilterLevel$1) {
+	SafetyFilterLevel$1["BLOCK_LOW_AND_ABOVE"] = "BLOCK_LOW_AND_ABOVE";
+	SafetyFilterLevel$1["BLOCK_MEDIUM_AND_ABOVE"] = "BLOCK_MEDIUM_AND_ABOVE";
+	SafetyFilterLevel$1["BLOCK_ONLY_HIGH"] = "BLOCK_ONLY_HIGH";
+	SafetyFilterLevel$1["BLOCK_NONE"] = "BLOCK_NONE";
+})(SafetyFilterLevel || (SafetyFilterLevel = {}));
+/** Enum that controls the generation of people. */
+var PersonGeneration;
+(function(PersonGeneration$1) {
+	PersonGeneration$1["DONT_ALLOW"] = "DONT_ALLOW";
+	PersonGeneration$1["ALLOW_ADULT"] = "ALLOW_ADULT";
+	PersonGeneration$1["ALLOW_ALL"] = "ALLOW_ALL";
+})(PersonGeneration || (PersonGeneration = {}));
+/** Enum that specifies the language of the text in the prompt. */
+var ImagePromptLanguage;
+(function(ImagePromptLanguage$1) {
+	ImagePromptLanguage$1["auto"] = "auto";
+	ImagePromptLanguage$1["en"] = "en";
+	ImagePromptLanguage$1["ja"] = "ja";
+	ImagePromptLanguage$1["ko"] = "ko";
+	ImagePromptLanguage$1["hi"] = "hi";
+})(ImagePromptLanguage || (ImagePromptLanguage = {}));
+/** State for the lifecycle of a File. */
+var FileState;
+(function(FileState$1) {
+	FileState$1["STATE_UNSPECIFIED"] = "STATE_UNSPECIFIED";
+	FileState$1["PROCESSING"] = "PROCESSING";
+	FileState$1["ACTIVE"] = "ACTIVE";
+	FileState$1["FAILED"] = "FAILED";
+})(FileState || (FileState = {}));
+/** Source of the File. */
+var FileSource;
+(function(FileSource$1) {
+	FileSource$1["SOURCE_UNSPECIFIED"] = "SOURCE_UNSPECIFIED";
+	FileSource$1["UPLOADED"] = "UPLOADED";
+	FileSource$1["GENERATED"] = "GENERATED";
+})(FileSource || (FileSource = {}));
+/** Enum representing the mask mode of a mask reference image. */
+var MaskReferenceMode;
+(function(MaskReferenceMode$1) {
+	MaskReferenceMode$1["MASK_MODE_DEFAULT"] = "MASK_MODE_DEFAULT";
+	MaskReferenceMode$1["MASK_MODE_USER_PROVIDED"] = "MASK_MODE_USER_PROVIDED";
+	MaskReferenceMode$1["MASK_MODE_BACKGROUND"] = "MASK_MODE_BACKGROUND";
+	MaskReferenceMode$1["MASK_MODE_FOREGROUND"] = "MASK_MODE_FOREGROUND";
+	MaskReferenceMode$1["MASK_MODE_SEMANTIC"] = "MASK_MODE_SEMANTIC";
+})(MaskReferenceMode || (MaskReferenceMode = {}));
+/** Enum representing the control type of a control reference image. */
+var ControlReferenceType;
+(function(ControlReferenceType$1) {
+	ControlReferenceType$1["CONTROL_TYPE_DEFAULT"] = "CONTROL_TYPE_DEFAULT";
+	ControlReferenceType$1["CONTROL_TYPE_CANNY"] = "CONTROL_TYPE_CANNY";
+	ControlReferenceType$1["CONTROL_TYPE_SCRIBBLE"] = "CONTROL_TYPE_SCRIBBLE";
+	ControlReferenceType$1["CONTROL_TYPE_FACE_MESH"] = "CONTROL_TYPE_FACE_MESH";
+})(ControlReferenceType || (ControlReferenceType = {}));
+/** Enum representing the subject type of a subject reference image. */
+var SubjectReferenceType;
+(function(SubjectReferenceType$1) {
+	SubjectReferenceType$1["SUBJECT_TYPE_DEFAULT"] = "SUBJECT_TYPE_DEFAULT";
+	SubjectReferenceType$1["SUBJECT_TYPE_PERSON"] = "SUBJECT_TYPE_PERSON";
+	SubjectReferenceType$1["SUBJECT_TYPE_ANIMAL"] = "SUBJECT_TYPE_ANIMAL";
+	SubjectReferenceType$1["SUBJECT_TYPE_PRODUCT"] = "SUBJECT_TYPE_PRODUCT";
+})(SubjectReferenceType || (SubjectReferenceType = {}));
+/** Server content modalities. */
+var MediaModality;
+(function(MediaModality$1) {
+	MediaModality$1["MODALITY_UNSPECIFIED"] = "MODALITY_UNSPECIFIED";
+	MediaModality$1["TEXT"] = "TEXT";
+	MediaModality$1["IMAGE"] = "IMAGE";
+	MediaModality$1["VIDEO"] = "VIDEO";
+	MediaModality$1["AUDIO"] = "AUDIO";
+	MediaModality$1["DOCUMENT"] = "DOCUMENT";
+})(MediaModality || (MediaModality = {}));
+/** Start of speech sensitivity. */
+var StartSensitivity;
+(function(StartSensitivity$1) {
+	StartSensitivity$1["START_SENSITIVITY_UNSPECIFIED"] = "START_SENSITIVITY_UNSPECIFIED";
+	StartSensitivity$1["START_SENSITIVITY_HIGH"] = "START_SENSITIVITY_HIGH";
+	StartSensitivity$1["START_SENSITIVITY_LOW"] = "START_SENSITIVITY_LOW";
+})(StartSensitivity || (StartSensitivity = {}));
+/** End of speech sensitivity. */
+var EndSensitivity;
+(function(EndSensitivity$1) {
+	EndSensitivity$1["END_SENSITIVITY_UNSPECIFIED"] = "END_SENSITIVITY_UNSPECIFIED";
+	EndSensitivity$1["END_SENSITIVITY_HIGH"] = "END_SENSITIVITY_HIGH";
+	EndSensitivity$1["END_SENSITIVITY_LOW"] = "END_SENSITIVITY_LOW";
+})(EndSensitivity || (EndSensitivity = {}));
+/** The different ways of handling user activity. */
+var ActivityHandling;
+(function(ActivityHandling$1) {
+	ActivityHandling$1["ACTIVITY_HANDLING_UNSPECIFIED"] = "ACTIVITY_HANDLING_UNSPECIFIED";
+	ActivityHandling$1["START_OF_ACTIVITY_INTERRUPTS"] = "START_OF_ACTIVITY_INTERRUPTS";
+	ActivityHandling$1["NO_INTERRUPTION"] = "NO_INTERRUPTION";
+})(ActivityHandling || (ActivityHandling = {}));
+/** Options about which input is included in the user's turn. */
+var TurnCoverage;
+(function(TurnCoverage$1) {
+	TurnCoverage$1["TURN_COVERAGE_UNSPECIFIED"] = "TURN_COVERAGE_UNSPECIFIED";
+	TurnCoverage$1["TURN_INCLUDES_ONLY_ACTIVITY"] = "TURN_INCLUDES_ONLY_ACTIVITY";
+	TurnCoverage$1["TURN_INCLUDES_ALL_INPUT"] = "TURN_INCLUDES_ALL_INPUT";
+})(TurnCoverage || (TurnCoverage = {}));
+/** Response message for PredictionService.GenerateContent. */
+var GenerateContentResponse = class {
+	/**
+	* Returns the concatenation of all text parts from the first candidate in the response.
+	*
+	* @remarks
+	* If there are multiple candidates in the response, the text from the first
+	* one will be returned.
+	* If there are non-text parts in the response, the concatenation of all text
+	* parts will be returned, and a warning will be logged.
+	* If there are thought parts in the response, the concatenation of all text
+	* parts excluding the thought parts will be returned.
+	*
+	* @example
+	* ```ts
+	* const response = await ai.models.generateContent({
+	*   model: 'gemini-2.0-flash',
+	*   contents:
+	*     'Why is the sky blue?',
+	* });
+	*
+	* console.debug(response.text);
+	* ```
+	*/
+	get text() {
+		var _a, _b, _c, _d, _e, _f, _g, _h;
+		if (((_d = (_c = (_b = (_a = this.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.parts) === null || _d === void 0 ? void 0 : _d.length) === 0) return void 0;
+		if (this.candidates && this.candidates.length > 1) console.warn("there are multiple candidates in the response, returning text from the first one.");
+		let text = "";
+		let anyTextPartText = false;
+		const nonTextParts = [];
+		for (const part of (_h = (_g = (_f = (_e = this.candidates) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.content) === null || _g === void 0 ? void 0 : _g.parts) !== null && _h !== void 0 ? _h : []) {
+			for (const [fieldName, fieldValue] of Object.entries(part)) if (fieldName !== "text" && fieldName !== "thought" && (fieldValue !== null || fieldValue !== void 0)) nonTextParts.push(fieldName);
+			if (typeof part.text === "string") {
+				if (typeof part.thought === "boolean" && part.thought) continue;
+				anyTextPartText = true;
+				text += part.text;
+			}
+		}
+		if (nonTextParts.length > 0) console.warn(`there are non-text parts ${nonTextParts} in the response, returning concatenation of all text parts. Please refer to the non text parts for a full response from model.`);
+		return anyTextPartText ? text : void 0;
+	}
+	/**
+	* Returns the function calls from the first candidate in the response.
+	*
+	* @remarks
+	* If there are multiple candidates in the response, the function calls from
+	* the first one will be returned.
+	* If there are no function calls in the response, undefined will be returned.
+	*
+	* @example
+	* ```ts
+	* const controlLightFunctionDeclaration: FunctionDeclaration = {
+	*   name: 'controlLight',
+	*   parameters: {
+	*   type: Type.OBJECT,
+	*   description: 'Set the brightness and color temperature of a room light.',
+	*   properties: {
+	*     brightness: {
+	*       type: Type.NUMBER,
+	*       description:
+	*         'Light level from 0 to 100. Zero is off and 100 is full brightness.',
+	*     },
+	*     colorTemperature: {
+	*       type: Type.STRING,
+	*       description:
+	*         'Color temperature of the light fixture which can be `daylight`, `cool` or `warm`.',
+	*     },
+	*   },
+	*   required: ['brightness', 'colorTemperature'],
+	*  };
+	*  const response = await ai.models.generateContent({
+	*     model: 'gemini-2.0-flash',
+	*     contents: 'Dim the lights so the room feels cozy and warm.',
+	*     config: {
+	*       tools: [{functionDeclarations: [controlLightFunctionDeclaration]}],
+	*       toolConfig: {
+	*         functionCallingConfig: {
+	*           mode: FunctionCallingConfigMode.ANY,
+	*           allowedFunctionNames: ['controlLight'],
+	*         },
+	*       },
+	*     },
+	*   });
+	*  console.debug(JSON.stringify(response.functionCalls));
+	* ```
+	*/
+	get functionCalls() {
+		var _a, _b, _c, _d, _e, _f, _g, _h;
+		if (((_d = (_c = (_b = (_a = this.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.parts) === null || _d === void 0 ? void 0 : _d.length) === 0) return void 0;
+		if (this.candidates && this.candidates.length > 1) console.warn("there are multiple candidates in the response, returning function calls from the first one.");
+		const functionCalls = (_h = (_g = (_f = (_e = this.candidates) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.content) === null || _g === void 0 ? void 0 : _g.parts) === null || _h === void 0 ? void 0 : _h.filter((part) => part.functionCall).map((part) => part.functionCall).filter((functionCall) => functionCall !== void 0);
+		if ((functionCalls === null || functionCalls === void 0 ? void 0 : functionCalls.length) === 0) return void 0;
+		return functionCalls;
+	}
+	/**
+	* Returns the first executable code from the first candidate in the response.
+	*
+	* @remarks
+	* If there are multiple candidates in the response, the executable code from
+	* the first one will be returned.
+	* If there are no executable code in the response, undefined will be
+	* returned.
+	*
+	* @example
+	* ```ts
+	* const response = await ai.models.generateContent({
+	*   model: 'gemini-2.0-flash',
+	*   contents:
+	*     'What is the sum of the first 50 prime numbers? Generate and run code for the calculation, and make sure you get all 50.'
+	*   config: {
+	*     tools: [{codeExecution: {}}],
+	*   },
+	* });
+	*
+	* console.debug(response.executableCode);
+	* ```
+	*/
+	get executableCode() {
+		var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+		if (((_d = (_c = (_b = (_a = this.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.parts) === null || _d === void 0 ? void 0 : _d.length) === 0) return void 0;
+		if (this.candidates && this.candidates.length > 1) console.warn("there are multiple candidates in the response, returning executable code from the first one.");
+		const executableCode = (_h = (_g = (_f = (_e = this.candidates) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.content) === null || _g === void 0 ? void 0 : _g.parts) === null || _h === void 0 ? void 0 : _h.filter((part) => part.executableCode).map((part) => part.executableCode).filter((executableCode$1) => executableCode$1 !== void 0);
+		if ((executableCode === null || executableCode === void 0 ? void 0 : executableCode.length) === 0) return void 0;
+		return (_j = executableCode === null || executableCode === void 0 ? void 0 : executableCode[0]) === null || _j === void 0 ? void 0 : _j.code;
+	}
+	/**
+	* Returns the first code execution result from the first candidate in the response.
+	*
+	* @remarks
+	* If there are multiple candidates in the response, the code execution result from
+	* the first one will be returned.
+	* If there are no code execution result in the response, undefined will be returned.
+	*
+	* @example
+	* ```ts
+	* const response = await ai.models.generateContent({
+	*   model: 'gemini-2.0-flash',
+	*   contents:
+	*     'What is the sum of the first 50 prime numbers? Generate and run code for the calculation, and make sure you get all 50.'
+	*   config: {
+	*     tools: [{codeExecution: {}}],
+	*   },
+	* });
+	*
+	* console.debug(response.codeExecutionResult);
+	* ```
+	*/
+	get codeExecutionResult() {
+		var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+		if (((_d = (_c = (_b = (_a = this.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.parts) === null || _d === void 0 ? void 0 : _d.length) === 0) return void 0;
+		if (this.candidates && this.candidates.length > 1) console.warn("there are multiple candidates in the response, returning code execution result from the first one.");
+		const codeExecutionResult = (_h = (_g = (_f = (_e = this.candidates) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.content) === null || _g === void 0 ? void 0 : _g.parts) === null || _h === void 0 ? void 0 : _h.filter((part) => part.codeExecutionResult).map((part) => part.codeExecutionResult).filter((codeExecutionResult$1) => codeExecutionResult$1 !== void 0);
+		if ((codeExecutionResult === null || codeExecutionResult === void 0 ? void 0 : codeExecutionResult.length) === 0) return void 0;
+		return (_j = codeExecutionResult === null || codeExecutionResult === void 0 ? void 0 : codeExecutionResult[0]) === null || _j === void 0 ? void 0 : _j.output;
+	}
+};
+/** Response for the embed_content method. */
+var EmbedContentResponse = class {};
+/** The output images response. */
+var GenerateImagesResponse = class {};
+/** Response for counting tokens. */
+var CountTokensResponse = class {};
+/** Response for computing tokens. */
+var ComputeTokensResponse = class {};
+/** Empty response for caches.delete method. */
+var DeleteCachedContentResponse = class {};
+var ListCachedContentsResponse = class {};
+/** Response for the list files method. */
+var ListFilesResponse = class {};
+/** A wrapper class for the http response. */
+var HttpResponse = class {
+	constructor(response) {
+		const headers = {};
+		for (const pair of response.headers.entries()) headers[pair[0]] = pair[1];
+		this.headers = headers;
+		this.responseInternal = response;
+	}
+	json() {
+		return this.responseInternal.json();
+	}
+};
+/** Response for the create file method. */
+var CreateFileResponse = class {};
+/** Response for the delete file method. */
+var DeleteFileResponse = class {};
+/**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+var Caches = class extends BaseModule {
+	constructor(apiClient) {
+		super();
+		this.apiClient = apiClient;
+		/**
+		* Lists cached content configurations.
+		*
+		* @param params - The parameters for the list request.
+		* @return The paginated results of the list of cached contents.
+		*
+		* @example
+		* ```ts
+		* const cachedContents = await ai.caches.list({config: {'pageSize': 2}});
+		* for (const cachedContent of cachedContents) {
+		*   console.log(cachedContent);
+		* }
+		* ```
+		*/
+		this.list = async (params = {}) => {
+			return new Pager(PagedItem.PAGED_ITEM_CACHED_CONTENTS, (x) => this.listInternal(x), await this.listInternal(params), params);
+		};
+	}
+	/**
+	* Creates a cached contents resource.
+	*
+	* @remarks
+	* Context caching is only supported for specific models. See [Gemini
+	* Developer API reference](https://ai.google.dev/gemini-api/docs/caching?lang=node/context-cac)
+	* and [Vertex AI reference](https://cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview#supported_models)
+	* for more information.
+	*
+	* @param params - The parameters for the create request.
+	* @return The created cached content.
+	*
+	* @example
+	* ```ts
+	* const contents = ...; // Initialize the content to cache.
+	* const response = await ai.caches.create({
+	*   model: 'gemini-1.5-flash',
+	*   config: {
+	*    'contents': contents,
+	*    'displayName': 'test cache',
+	*    'systemInstruction': 'What is the sum of the two pdfs?',
+	*    'ttl': '86400s',
+	*  }
+	* });
+	* ```
+	*/
+	async create(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = createCachedContentParametersToVertex(this.apiClient, params);
+			path = formatMap("cachedContents", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = cachedContentFromVertex(this.apiClient, apiResponse);
+				return resp;
+			});
+		} else {
+			const body = createCachedContentParametersToMldev(this.apiClient, params);
+			path = formatMap("cachedContents", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = cachedContentFromMldev(this.apiClient, apiResponse);
+				return resp;
+			});
+		}
+	}
+	/**
+	* Gets cached content configurations.
+	*
+	* @param params - The parameters for the get request.
+	* @return The cached content.
+	*
+	* @example
+	* ```ts
+	* await ai.caches.get({name: 'gemini-1.5-flash'});
+	* ```
+	*/
+	async get(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = getCachedContentParametersToVertex(this.apiClient, params);
+			path = formatMap("{name}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "GET",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = cachedContentFromVertex(this.apiClient, apiResponse);
+				return resp;
+			});
+		} else {
+			const body = getCachedContentParametersToMldev(this.apiClient, params);
+			path = formatMap("{name}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "GET",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = cachedContentFromMldev(this.apiClient, apiResponse);
+				return resp;
+			});
+		}
+	}
+	/**
+	* Deletes cached content.
+	*
+	* @param params - The parameters for the delete request.
+	* @return The empty response returned by the API.
+	*
+	* @example
+	* ```ts
+	* await ai.caches.delete({name: 'gemini-1.5-flash'});
+	* ```
+	*/
+	async delete(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = deleteCachedContentParametersToVertex(this.apiClient, params);
+			path = formatMap("{name}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "DELETE",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then(() => {
+				const resp = deleteCachedContentResponseFromVertex();
+				const typedResp = new DeleteCachedContentResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		} else {
+			const body = deleteCachedContentParametersToMldev(this.apiClient, params);
+			path = formatMap("{name}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "DELETE",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then(() => {
+				const resp = deleteCachedContentResponseFromMldev();
+				const typedResp = new DeleteCachedContentResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		}
+	}
+	/**
+	* Updates cached content configurations.
+	*
+	* @param params - The parameters for the update request.
+	* @return The updated cached content.
+	*
+	* @example
+	* ```ts
+	* const response = await ai.caches.update({
+	*   name: 'gemini-1.5-flash',
+	*   config: {'ttl': '7600s'}
+	* });
+	* ```
+	*/
+	async update(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = updateCachedContentParametersToVertex(this.apiClient, params);
+			path = formatMap("{name}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "PATCH",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = cachedContentFromVertex(this.apiClient, apiResponse);
+				return resp;
+			});
+		} else {
+			const body = updateCachedContentParametersToMldev(this.apiClient, params);
+			path = formatMap("{name}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "PATCH",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = cachedContentFromMldev(this.apiClient, apiResponse);
+				return resp;
+			});
+		}
+	}
+	async listInternal(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = listCachedContentsParametersToVertex(this.apiClient, params);
+			path = formatMap("cachedContents", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "GET",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = listCachedContentsResponseFromVertex(this.apiClient, apiResponse);
+				const typedResp = new ListCachedContentsResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		} else {
+			const body = listCachedContentsParametersToMldev(this.apiClient, params);
+			path = formatMap("cachedContents", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "GET",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = listCachedContentsResponseFromMldev(this.apiClient, apiResponse);
+				const typedResp = new ListCachedContentsResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		}
+	}
+};
 /******************************************************************************
 
 Copyright (c) Microsoft Corporation.
@@ -907,6 +1843,198 @@ function extractCuratedHistory(comprehensiveHistory) {
 	return curatedHistory;
 }
 /**
+* A utility class to create a chat session.
+*/
+var Chats = class {
+	constructor(modelsModule, apiClient) {
+		this.modelsModule = modelsModule;
+		this.apiClient = apiClient;
+	}
+	/**
+	* Creates a new chat session.
+	*
+	* @remarks
+	* The config in the params will be used for all requests within the chat
+	* session unless overridden by a per-request `config` in
+	* @see {@link types.SendMessageParameters#config}.
+	*
+	* @param params - Parameters for creating a chat session.
+	* @returns A new chat session.
+	*
+	* @example
+	* ```ts
+	* const chat = ai.chats.create({
+	*   model: 'gemini-2.0-flash'
+	*   config: {
+	*     temperature: 0.5,
+	*     maxOutputTokens: 1024,
+	*   }
+	* });
+	* ```
+	*/
+	create(params) {
+		return new Chat(this.apiClient, this.modelsModule, params.model, params.config, params.history);
+	}
+};
+/**
+* Chat session that enables sending messages to the model with previous
+* conversation context.
+*
+* @remarks
+* The session maintains all the turns between user and model.
+*/
+var Chat = class {
+	constructor(apiClient, modelsModule, model, config = {}, history = []) {
+		this.apiClient = apiClient;
+		this.modelsModule = modelsModule;
+		this.model = model;
+		this.config = config;
+		this.history = history;
+		this.sendPromise = Promise.resolve();
+		validateHistory(history);
+	}
+	/**
+	* Sends a message to the model and returns the response.
+	*
+	* @remarks
+	* This method will wait for the previous message to be processed before
+	* sending the next message.
+	*
+	* @see {@link Chat#sendMessageStream} for streaming method.
+	* @param params - parameters for sending messages within a chat session.
+	* @returns The model's response.
+	*
+	* @example
+	* ```ts
+	* const chat = ai.chats.create({model: 'gemini-2.0-flash'});
+	* const response = await chat.sendMessage({
+	*   message: 'Why is the sky blue?'
+	* });
+	* console.log(response.text);
+	* ```
+	*/
+	async sendMessage(params) {
+		var _a;
+		await this.sendPromise;
+		const inputContent = tContent(this.apiClient, params.message);
+		const responsePromise = this.modelsModule.generateContent({
+			model: this.model,
+			contents: this.getHistory(true).concat(inputContent),
+			config: (_a = params.config) !== null && _a !== void 0 ? _a : this.config
+		});
+		this.sendPromise = (async () => {
+			var _a$1, _b;
+			const response = await responsePromise;
+			const outputContent = (_b = (_a$1 = response.candidates) === null || _a$1 === void 0 ? void 0 : _a$1[0]) === null || _b === void 0 ? void 0 : _b.content;
+			const modelOutput = outputContent ? [outputContent] : [];
+			this.recordHistory(inputContent, modelOutput);
+			return;
+		})();
+		await this.sendPromise;
+		return responsePromise;
+	}
+	/**
+	* Sends a message to the model and returns the response in chunks.
+	*
+	* @remarks
+	* This method will wait for the previous message to be processed before
+	* sending the next message.
+	*
+	* @see {@link Chat#sendMessage} for non-streaming method.
+	* @param params - parameters for sending the message.
+	* @return The model's response.
+	*
+	* @example
+	* ```ts
+	* const chat = ai.chats.create({model: 'gemini-2.0-flash'});
+	* const response = await chat.sendMessageStream({
+	*   message: 'Why is the sky blue?'
+	* });
+	* for await (const chunk of response) {
+	*   console.log(chunk.text);
+	* }
+	* ```
+	*/
+	async sendMessageStream(params) {
+		var _a;
+		await this.sendPromise;
+		const inputContent = tContent(this.apiClient, params.message);
+		const streamResponse = this.modelsModule.generateContentStream({
+			model: this.model,
+			contents: this.getHistory(true).concat(inputContent),
+			config: (_a = params.config) !== null && _a !== void 0 ? _a : this.config
+		});
+		this.sendPromise = streamResponse.then(() => void 0);
+		const response = await streamResponse;
+		const result = this.processStreamResponse(response, inputContent);
+		return result;
+	}
+	/**
+	* Returns the chat history.
+	*
+	* @remarks
+	* The history is a list of contents alternating between user and model.
+	*
+	* There are two types of history:
+	* - The `curated history` contains only the valid turns between user and
+	* model, which will be included in the subsequent requests sent to the model.
+	* - The `comprehensive history` contains all turns, including invalid or
+	*   empty model outputs, providing a complete record of the history.
+	*
+	* The history is updated after receiving the response from the model,
+	* for streaming response, it means receiving the last chunk of the response.
+	*
+	* The `comprehensive history` is returned by default. To get the `curated
+	* history`, set the `curated` parameter to `true`.
+	*
+	* @param curated - whether to return the curated history or the comprehensive
+	*     history.
+	* @return History contents alternating between user and model for the entire
+	*     chat session.
+	*/
+	getHistory(curated = false) {
+		return curated ? extractCuratedHistory(this.history) : this.history;
+	}
+	processStreamResponse(streamResponse, inputContent) {
+		var _a, _b;
+		return __asyncGenerator(this, arguments, function* processStreamResponse_1() {
+			var _c, e_1, _d, _e;
+			const outputContent = [];
+			try {
+				for (var _f = true, streamResponse_1 = __asyncValues(streamResponse), streamResponse_1_1; streamResponse_1_1 = yield __await(streamResponse_1.next()), _c = streamResponse_1_1.done, !_c; _f = true) {
+					_e = streamResponse_1_1.value;
+					_f = false;
+					const chunk = _e;
+					if (isValidResponse(chunk)) {
+						const content = (_b = (_a = chunk.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content;
+						if (content !== void 0) outputContent.push(content);
+					}
+					yield yield __await(chunk);
+				}
+			} catch (e_1_1) {
+				e_1 = { error: e_1_1 };
+			} finally {
+				try {
+					if (!_f && !_c && (_d = streamResponse_1.return)) yield __await(_d.call(streamResponse_1));
+				} finally {
+					if (e_1) throw e_1.error;
+				}
+			}
+			this.recordHistory(inputContent, outputContent);
+		});
+	}
+	recordHistory(userInput, modelOutput) {
+		let outputContents = [];
+		if (modelOutput.length > 0 && modelOutput.every((content) => content.role === "model")) outputContents = modelOutput;
+		else outputContents.push({
+			role: "model",
+			parts: []
+		});
+		this.history.push(userInput);
+		this.history.push(...outputContents);
+	}
+};
+/**
 * @license
 * Copyright 2025 Google LLC
 * SPDX-License-Identifier: Apache-2.0
@@ -1052,6 +2180,233 @@ function deleteFileResponseFromMldev() {
 	const toObject = {};
 	return toObject;
 }
+/**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+var Files = class extends BaseModule {
+	constructor(apiClient) {
+		super();
+		this.apiClient = apiClient;
+		/**
+		* Lists all current project files from the service.
+		*
+		* @param params - The parameters for the list request
+		* @return The paginated results of the list of files
+		*
+		* @example
+		* The following code prints the names of all files from the service, the
+		* size of each page is 10.
+		*
+		* ```ts
+		* const listResponse = await ai.files.list({config: {'pageSize': 10}});
+		* for await (const file of listResponse) {
+		*   console.log(file.name);
+		* }
+		* ```
+		*/
+		this.list = async (params = {}) => {
+			return new Pager(PagedItem.PAGED_ITEM_FILES, (x) => this.listInternal(x), await this.listInternal(params), params);
+		};
+	}
+	/**
+	* Uploads a file asynchronously to the Gemini API.
+	* This method is not available in Vertex AI.
+	* Supported upload sources:
+	* - Node.js: File path (string) or Blob object.
+	* - Browser: Blob object (e.g., File).
+	*
+	* @remarks
+	* The `mimeType` can be specified in the `config` parameter. If omitted:
+	*  - For file path (string) inputs, the `mimeType` will be inferred from the
+	*     file extension.
+	*  - For Blob object inputs, the `mimeType` will be set to the Blob's `type`
+	*     property.
+	* Somex eamples for file extension to mimeType mapping:
+	* .txt -> text/plain
+	* .json -> application/json
+	* .jpg  -> image/jpeg
+	* .png -> image/png
+	* .mp3 -> audio/mpeg
+	* .mp4 -> video/mp4
+	*
+	* This section can contain multiple paragraphs and code examples.
+	*
+	* @param params - Optional parameters specified in the
+	*        `types.UploadFileParameters` interface.
+	*         @see {@link types.UploadFileParameters#config} for the optional
+	*         config in the parameters.
+	* @return A promise that resolves to a `types.File` object.
+	* @throws An error if called on a Vertex AI client.
+	* @throws An error if the `mimeType` is not provided and can not be inferred,
+	* the `mimeType` can be provided in the `params.config` parameter.
+	* @throws An error occurs if a suitable upload location cannot be established.
+	*
+	* @example
+	* The following code uploads a file to Gemini API.
+	*
+	* ```ts
+	* const file = await ai.files.upload({file: 'file.txt', config: {
+	*   mimeType: 'text/plain',
+	* }});
+	* console.log(file.name);
+	* ```
+	*/
+	async upload(params) {
+		if (this.apiClient.isVertexAI()) throw new Error("Vertex AI does not support uploading files. You can share files through a GCS bucket.");
+		return this.apiClient.uploadFile(params.file, params.config).then((response) => {
+			const file = fileFromMldev(this.apiClient, response);
+			return file;
+		});
+	}
+	async listInternal(params) {
+		var _a;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) throw new Error("This method is only supported by the Gemini Developer API.");
+		else {
+			const body = listFilesParametersToMldev(this.apiClient, params);
+			path = formatMap("files", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "GET",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = listFilesResponseFromMldev(this.apiClient, apiResponse);
+				const typedResp = new ListFilesResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		}
+	}
+	async createInternal(params) {
+		var _a;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) throw new Error("This method is only supported by the Gemini Developer API.");
+		else {
+			const body = createFileParametersToMldev(this.apiClient, params);
+			path = formatMap("upload/v1beta/files", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then(() => {
+				const resp = createFileResponseFromMldev();
+				const typedResp = new CreateFileResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		}
+	}
+	/**
+	* Retrieves the file information from the service.
+	*
+	* @param params - The parameters for the get request
+	* @return The Promise that resolves to the types.File object requested.
+	*
+	* @example
+	* ```ts
+	* const config: GetFileParameters = {
+	*   name: fileName,
+	* };
+	* file = await ai.files.get(config);
+	* console.log(file.name);
+	* ```
+	*/
+	async get(params) {
+		var _a;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) throw new Error("This method is only supported by the Gemini Developer API.");
+		else {
+			const body = getFileParametersToMldev(this.apiClient, params);
+			path = formatMap("files/{file}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "GET",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = fileFromMldev(this.apiClient, apiResponse);
+				return resp;
+			});
+		}
+	}
+	/**
+	* Deletes a remotely stored file.
+	*
+	* @param params - The parameters for the delete request.
+	* @return The DeleteFileResponse, the response for the delete method.
+	*
+	* @example
+	* The following code deletes an example file named "files/mehozpxf877d".
+	*
+	* ```ts
+	* await ai.files.delete({name: file.name});
+	* ```
+	*/
+	async delete(params) {
+		var _a;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) throw new Error("This method is only supported by the Gemini Developer API.");
+		else {
+			const body = deleteFileParametersToMldev(this.apiClient, params);
+			path = formatMap("files/{file}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "DELETE",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then(() => {
+				const resp = deleteFileResponseFromMldev();
+				const typedResp = new DeleteFileResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		}
+	}
+};
 /**
 * @license
 * Copyright 2025 Google LLC
@@ -3127,6 +4482,12 @@ function generateVideosOperationFromVertex$1(apiClient, fromObject) {
 	return toObject;
 }
 /**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+const FUNCTION_RESPONSE_REQUIRES_ID = "FunctionResponse request must have an `id` field from the response of a ToolCall.FunctionalCalls in Google AI.";
+/**
 * Handles incoming messages from the WebSocket.
 *
 * @remarks
@@ -3148,6 +4509,294 @@ async function handleWebSocketMessage(apiClient, onmessage, event) {
 	else serverMessage = liveServerMessageFromMldev(apiClient, data);
 	onmessage(serverMessage);
 }
+/**
+Live class encapsulates the configuration for live interaction with the
+Generative Language API. It embeds ApiClient for general API settings.
+
+@experimental
+*/
+var Live = class {
+	constructor(apiClient, auth, webSocketFactory) {
+		this.apiClient = apiClient;
+		this.auth = auth;
+		this.webSocketFactory = webSocketFactory;
+	}
+	/**
+	Establishes a connection to the specified model with the given
+	configuration and returns a Session object representing that connection.
+	
+	@experimental
+	
+	@remarks
+	
+	@param params - The parameters for establishing a connection to the model.
+	@return A live session.
+	
+	@example
+	```ts
+	let model: string;
+	if (GOOGLE_GENAI_USE_VERTEXAI) {
+	model = 'gemini-2.0-flash-live-preview-04-09';
+	} else {
+	model = 'gemini-2.0-flash-live-001';
+	}
+	const session = await ai.live.connect({
+	model: model,
+	config: {
+	responseModalities: [Modality.AUDIO],
+	},
+	callbacks: {
+	onopen: () => {
+	console.log('Connected to the socket.');
+	},
+	onmessage: (e: MessageEvent) => {
+	console.log('Received message from the server: %s\n', debug(e.data));
+	},
+	onerror: (e: ErrorEvent) => {
+	console.log('Error occurred: %s\n', debug(e.error));
+	},
+	onclose: (e: CloseEvent) => {
+	console.log('Connection closed.');
+	},
+	},
+	});
+	```
+	*/
+	async connect(params) {
+		var _a, _b, _c, _d;
+		const websocketBaseUrl = this.apiClient.getWebsocketBaseUrl();
+		const apiVersion = this.apiClient.getApiVersion();
+		let url;
+		const headers = mapToHeaders(this.apiClient.getDefaultHeaders());
+		if (this.apiClient.isVertexAI()) {
+			url = `${websocketBaseUrl}/ws/google.cloud.aiplatform.${apiVersion}.LlmBidiService/BidiGenerateContent`;
+			await this.auth.addAuthHeaders(headers);
+		} else {
+			const apiKey = this.apiClient.getApiKey();
+			url = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateContent?key=${apiKey}`;
+		}
+		let onopenResolve = () => {};
+		const onopenPromise = new Promise((resolve) => {
+			onopenResolve = resolve;
+		});
+		const callbacks = params.callbacks;
+		const onopenAwaitedCallback = function() {
+			var _a$1;
+			(_a$1 = callbacks === null || callbacks === void 0 ? void 0 : callbacks.onopen) === null || _a$1 === void 0 || _a$1.call(callbacks);
+			onopenResolve({});
+		};
+		const apiClient = this.apiClient;
+		const websocketCallbacks = {
+			onopen: onopenAwaitedCallback,
+			onmessage: (event) => {
+				handleWebSocketMessage(apiClient, callbacks.onmessage, event);
+			},
+			onerror: (_a = callbacks === null || callbacks === void 0 ? void 0 : callbacks.onerror) !== null && _a !== void 0 ? _a : function(e) {},
+			onclose: (_b = callbacks === null || callbacks === void 0 ? void 0 : callbacks.onclose) !== null && _b !== void 0 ? _b : function(e) {}
+		};
+		const conn = this.webSocketFactory.create(url, headersToMap(headers), websocketCallbacks);
+		conn.connect();
+		await onopenPromise;
+		let transformedModel = tModel(this.apiClient, params.model);
+		if (this.apiClient.isVertexAI() && transformedModel.startsWith("publishers/")) {
+			const project = this.apiClient.getProject();
+			const location = this.apiClient.getLocation();
+			transformedModel = `projects/${project}/locations/${location}/` + transformedModel;
+		}
+		let clientMessage = {};
+		if (this.apiClient.isVertexAI() && ((_c = params.config) === null || _c === void 0 ? void 0 : _c.responseModalities) === void 0) if (params.config === void 0) params.config = { responseModalities: [Modality.AUDIO] };
+		else params.config.responseModalities = [Modality.AUDIO];
+		if ((_d = params.config) === null || _d === void 0 ? void 0 : _d.generationConfig) console.warn("Setting `LiveConnectConfig.generation_config` is deprecated, please set the fields on `LiveConnectConfig` directly. This will become an error in a future version (not before Q3 2025).");
+		const liveConnectParameters = {
+			model: transformedModel,
+			config: params.config,
+			callbacks: params.callbacks
+		};
+		if (this.apiClient.isVertexAI()) clientMessage = liveConnectParametersToVertex(this.apiClient, liveConnectParameters);
+		else clientMessage = liveConnectParametersToMldev(this.apiClient, liveConnectParameters);
+		delete clientMessage["config"];
+		conn.send(JSON.stringify(clientMessage));
+		return new Session(conn, this.apiClient);
+	}
+};
+const defaultLiveSendClientContentParamerters = { turnComplete: true };
+/**
+Represents a connection to the API.
+
+@experimental
+*/
+var Session = class {
+	constructor(conn, apiClient) {
+		this.conn = conn;
+		this.apiClient = apiClient;
+	}
+	tLiveClientContent(apiClient, params) {
+		if (params.turns !== null && params.turns !== void 0) {
+			let contents = [];
+			try {
+				contents = tContents(apiClient, params.turns);
+				if (apiClient.isVertexAI()) contents = contents.map((item) => contentToVertex(apiClient, item));
+				else contents = contents.map((item) => contentToMldev(apiClient, item));
+			} catch (_a) {
+				throw new Error(`Failed to parse client content "turns", type: '${typeof params.turns}'`);
+			}
+			return { clientContent: {
+				turns: contents,
+				turnComplete: params.turnComplete
+			} };
+		}
+		return { clientContent: { turnComplete: params.turnComplete } };
+	}
+	tLiveClientRealtimeInput(apiClient, params) {
+		let clientMessage = {};
+		if (!("media" in params) || !params.media) throw new Error(`Failed to convert realtime input "media", type: '${typeof params.media}'`);
+		clientMessage = { realtimeInput: {
+			mediaChunks: [params.media],
+			activityStart: params.activityStart,
+			activityEnd: params.activityEnd
+		} };
+		return clientMessage;
+	}
+	tLiveClienttToolResponse(apiClient, params) {
+		let functionResponses = [];
+		if (params.functionResponses == null) throw new Error("functionResponses is required.");
+		if (!Array.isArray(params.functionResponses)) functionResponses = [params.functionResponses];
+		else functionResponses = params.functionResponses;
+		if (functionResponses.length === 0) throw new Error("functionResponses is required.");
+		for (const functionResponse of functionResponses) {
+			if (typeof functionResponse !== "object" || functionResponse === null || !("name" in functionResponse) || !("response" in functionResponse)) throw new Error(`Could not parse function response, type '${typeof functionResponse}'.`);
+			if (!apiClient.isVertexAI() && !("id" in functionResponse)) throw new Error(FUNCTION_RESPONSE_REQUIRES_ID);
+		}
+		const clientMessage = { toolResponse: { functionResponses } };
+		return clientMessage;
+	}
+	/**
+	Send a message over the established connection.
+	
+	@param params - Contains two **optional** properties, `turns` and
+	`turnComplete`.
+	
+	- `turns` will be converted to a `Content[]`
+	- `turnComplete: true` [default] indicates that you are done sending
+	content and expect a response. If `turnComplete: false`, the server
+	will wait for additional messages before starting generation.
+	
+	@experimental
+	
+	@remarks
+	There are two ways to send messages to the live API:
+	`sendClientContent` and `sendRealtimeInput`.
+	
+	`sendClientContent` messages are added to the model context **in order**.
+	Having a conversation using `sendClientContent` messages is roughly
+	equivalent to using the `Chat.sendMessageStream`, except that the state of
+	the `chat` history is stored on the API server instead of locally.
+	
+	Because of `sendClientContent`'s order guarantee, the model cannot respons
+	as quickly to `sendClientContent` messages as to `sendRealtimeInput`
+	messages. This makes the biggest difference when sending objects that have
+	significant preprocessing time (typically images).
+	
+	The `sendClientContent` message sends a `Content[]`
+	which has more options than the `Blob` sent by `sendRealtimeInput`.
+	
+	So the main use-cases for `sendClientContent` over `sendRealtimeInput` are:
+	
+	- Sending anything that can't be represented as a `Blob` (text,
+	`sendClientContent({turns="Hello?"}`)).
+	- Managing turns when not using audio input and voice activity detection.
+	(`sendClientContent({turnComplete:true})` or the short form
+	`sendClientContent()`)
+	- Prefilling a conversation context
+	```
+	sendClientContent({
+	turns: [
+	Content({role:user, parts:...}),
+	Content({role:user, parts:...}),
+	...
+	]
+	})
+	```
+	@experimental
+	*/
+	sendClientContent(params) {
+		params = Object.assign(Object.assign({}, defaultLiveSendClientContentParamerters), params);
+		const clientMessage = this.tLiveClientContent(this.apiClient, params);
+		this.conn.send(JSON.stringify(clientMessage));
+	}
+	/**
+	Send a realtime message over the established connection.
+	
+	@param params - Contains one property, `media`.
+	
+	- `media` will be converted to a `Blob`
+	
+	@experimental
+	
+	@remarks
+	Use `sendRealtimeInput` for realtime audio chunks and video frames (images).
+	
+	With `sendRealtimeInput` the api will respond to audio automatically
+	based on voice activity detection (VAD).
+	
+	`sendRealtimeInput` is optimized for responsivness at the expense of
+	deterministic ordering guarantees. Audio and video tokens are to the
+	context when they become available.
+	
+	Note: The Call signature expects a `Blob` object, but only a subset
+	of audio and image mimetypes are allowed.
+	*/
+	sendRealtimeInput(params) {
+		if (params.media == null) throw new Error("Media is required.");
+		const clientMessage = this.tLiveClientRealtimeInput(this.apiClient, params);
+		this.conn.send(JSON.stringify(clientMessage));
+	}
+	/**
+	Send a function response message over the established connection.
+	
+	@param params - Contains property `functionResponses`.
+	
+	- `functionResponses` will be converted to a `functionResponses[]`
+	
+	@remarks
+	Use `sendFunctionResponse` to reply to `LiveServerToolCall` from the server.
+	
+	Use {@link types.LiveConnectConfig#tools} to configure the callable functions.
+	
+	@experimental
+	*/
+	sendToolResponse(params) {
+		if (params.functionResponses == null) throw new Error("Tool response parameters are required.");
+		const clientMessage = this.tLiveClienttToolResponse(this.apiClient, params);
+		this.conn.send(JSON.stringify(clientMessage));
+	}
+	/**
+	Terminates the WebSocket connection.
+	
+	@experimental
+	
+	@example
+	```ts
+	let model: string;
+	if (GOOGLE_GENAI_USE_VERTEXAI) {
+	model = 'gemini-2.0-flash-live-preview-04-09';
+	} else {
+	model = 'gemini-2.0-flash-live-001';
+	}
+	const session = await ai.live.connect({
+	model: model,
+	config: {
+	responseModalities: [Modality.AUDIO],
+	}
+	});
+	
+	session.close();
+	```
+	*/
+	close() {
+		this.conn.close();
+	}
+};
 function headersToMap(headers) {
 	const headerMap = {};
 	headers.forEach((value, key) => {
@@ -3160,6 +4809,656 @@ function mapToHeaders(map) {
 	for (const [key, value] of Object.entries(map)) headers.append(key, value);
 	return headers;
 }
+/**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+var Models = class extends BaseModule {
+	constructor(apiClient) {
+		super();
+		this.apiClient = apiClient;
+		/**
+		* Makes an API request to generate content with a given model.
+		*
+		* For the `model` parameter, supported formats for Vertex AI API include:
+		* - The Gemini model ID, for example: 'gemini-2.0-flash'
+		* - The full resource name starts with 'projects/', for example:
+		*  'projects/my-project-id/locations/us-central1/publishers/google/models/gemini-2.0-flash'
+		* - The partial resource name with 'publishers/', for example:
+		*  'publishers/google/models/gemini-2.0-flash' or
+		*  'publishers/meta/models/llama-3.1-405b-instruct-maas'
+		* - `/` separated publisher and model name, for example:
+		* 'google/gemini-2.0-flash' or 'meta/llama-3.1-405b-instruct-maas'
+		*
+		* For the `model` parameter, supported formats for Gemini API include:
+		* - The Gemini model ID, for example: 'gemini-2.0-flash'
+		* - The model name starts with 'models/', for example:
+		*  'models/gemini-2.0-flash'
+		* - For tuned models, the model name starts with 'tunedModels/',
+		* for example:
+		* 'tunedModels/1234567890123456789'
+		*
+		* Some models support multimodal input and output.
+		*
+		* @param params - The parameters for generating content.
+		* @return The response from generating content.
+		*
+		* @example
+		* ```ts
+		* const response = await ai.models.generateContent({
+		*   model: 'gemini-2.0-flash',
+		*   contents: 'why is the sky blue?',
+		*   config: {
+		*     candidateCount: 2,
+		*   }
+		* });
+		* console.log(response);
+		* ```
+		*/
+		this.generateContent = async (params) => {
+			return await this.generateContentInternal(params);
+		};
+		/**
+		* Makes an API request to generate content with a given model and yields the
+		* response in chunks.
+		*
+		* For the `model` parameter, supported formats for Vertex AI API include:
+		* - The Gemini model ID, for example: 'gemini-2.0-flash'
+		* - The full resource name starts with 'projects/', for example:
+		*  'projects/my-project-id/locations/us-central1/publishers/google/models/gemini-2.0-flash'
+		* - The partial resource name with 'publishers/', for example:
+		*  'publishers/google/models/gemini-2.0-flash' or
+		*  'publishers/meta/models/llama-3.1-405b-instruct-maas'
+		* - `/` separated publisher and model name, for example:
+		* 'google/gemini-2.0-flash' or 'meta/llama-3.1-405b-instruct-maas'
+		*
+		* For the `model` parameter, supported formats for Gemini API include:
+		* - The Gemini model ID, for example: 'gemini-2.0-flash'
+		* - The model name starts with 'models/', for example:
+		*  'models/gemini-2.0-flash'
+		* - For tuned models, the model name starts with 'tunedModels/',
+		* for example:
+		*  'tunedModels/1234567890123456789'
+		*
+		* Some models support multimodal input and output.
+		*
+		* @param params - The parameters for generating content with streaming response.
+		* @return The response from generating content.
+		*
+		* @example
+		* ```ts
+		* const response = await ai.models.generateContentStream({
+		*   model: 'gemini-2.0-flash',
+		*   contents: 'why is the sky blue?',
+		*   config: {
+		*     maxOutputTokens: 200,
+		*   }
+		* });
+		* for await (const chunk of response) {
+		*   console.log(chunk);
+		* }
+		* ```
+		*/
+		this.generateContentStream = async (params) => {
+			return await this.generateContentStreamInternal(params);
+		};
+		/**
+		* Generates an image based on a text description and configuration.
+		*
+		* @param model - The model to use.
+		* @param prompt - A text description of the image to generate.
+		* @param [config] - The config for image generation.
+		* @return The response from the API.
+		*
+		* @example
+		* ```ts
+		* const response = await client.models.generateImages({
+		*  model: 'imagen-3.0-generate-002',
+		*  prompt: 'Robot holding a red skateboard',
+		*  config: {
+		*    numberOfImages: 1,
+		*    includeRaiReason: true,
+		*  },
+		* });
+		* console.log(response?.generatedImages?.[0]?.image?.imageBytes);
+		* ```
+		*/
+		this.generateImages = async (params) => {
+			return await this.generateImagesInternal(params).then((apiResponse) => {
+				var _a;
+				let positivePromptSafetyAttributes;
+				const generatedImages = [];
+				if (apiResponse === null || apiResponse === void 0 ? void 0 : apiResponse.generatedImages) for (const generatedImage of apiResponse.generatedImages) if (generatedImage && (generatedImage === null || generatedImage === void 0 ? void 0 : generatedImage.safetyAttributes) && ((_a = generatedImage === null || generatedImage === void 0 ? void 0 : generatedImage.safetyAttributes) === null || _a === void 0 ? void 0 : _a.contentType) === "Positive Prompt") positivePromptSafetyAttributes = generatedImage === null || generatedImage === void 0 ? void 0 : generatedImage.safetyAttributes;
+				else generatedImages.push(generatedImage);
+				let response;
+				if (positivePromptSafetyAttributes) response = {
+					generatedImages,
+					positivePromptSafetyAttributes
+				};
+				else response = { generatedImages };
+				return response;
+			});
+		};
+	}
+	async generateContentInternal(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = generateContentParametersToVertex(this.apiClient, params);
+			path = formatMap("{model}:generateContent", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = generateContentResponseFromVertex(this.apiClient, apiResponse);
+				const typedResp = new GenerateContentResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		} else {
+			const body = generateContentParametersToMldev(this.apiClient, params);
+			path = formatMap("{model}:generateContent", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = generateContentResponseFromMldev(this.apiClient, apiResponse);
+				const typedResp = new GenerateContentResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		}
+	}
+	async generateContentStreamInternal(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = generateContentParametersToVertex(this.apiClient, params);
+			path = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			const apiClient = this.apiClient;
+			response = apiClient.requestStream({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			});
+			return response.then(function(apiResponse) {
+				return __asyncGenerator(this, arguments, function* () {
+					var _a$1, e_1, _b$1, _c;
+					try {
+						for (var _d = true, apiResponse_1 = __asyncValues(apiResponse), apiResponse_1_1; apiResponse_1_1 = yield __await(apiResponse_1.next()), _a$1 = apiResponse_1_1.done, !_a$1; _d = true) {
+							_c = apiResponse_1_1.value;
+							_d = false;
+							const chunk = _c;
+							const resp = generateContentResponseFromVertex(apiClient, yield __await(chunk.json()));
+							const typedResp = new GenerateContentResponse();
+							Object.assign(typedResp, resp);
+							yield yield __await(typedResp);
+						}
+					} catch (e_1_1) {
+						e_1 = { error: e_1_1 };
+					} finally {
+						try {
+							if (!_d && !_a$1 && (_b$1 = apiResponse_1.return)) yield __await(_b$1.call(apiResponse_1));
+						} finally {
+							if (e_1) throw e_1.error;
+						}
+					}
+				});
+			});
+		} else {
+			const body = generateContentParametersToMldev(this.apiClient, params);
+			path = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			const apiClient = this.apiClient;
+			response = apiClient.requestStream({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			});
+			return response.then(function(apiResponse) {
+				return __asyncGenerator(this, arguments, function* () {
+					var _a$1, e_2, _b$1, _c;
+					try {
+						for (var _d = true, apiResponse_2 = __asyncValues(apiResponse), apiResponse_2_1; apiResponse_2_1 = yield __await(apiResponse_2.next()), _a$1 = apiResponse_2_1.done, !_a$1; _d = true) {
+							_c = apiResponse_2_1.value;
+							_d = false;
+							const chunk = _c;
+							const resp = generateContentResponseFromMldev(apiClient, yield __await(chunk.json()));
+							const typedResp = new GenerateContentResponse();
+							Object.assign(typedResp, resp);
+							yield yield __await(typedResp);
+						}
+					} catch (e_2_1) {
+						e_2 = { error: e_2_1 };
+					} finally {
+						try {
+							if (!_d && !_a$1 && (_b$1 = apiResponse_2.return)) yield __await(_b$1.call(apiResponse_2));
+						} finally {
+							if (e_2) throw e_2.error;
+						}
+					}
+				});
+			});
+		}
+	}
+	/**
+	* Calculates embeddings for the given contents. Only text is supported.
+	*
+	* @param params - The parameters for embedding contents.
+	* @return The response from the API.
+	*
+	* @example
+	* ```ts
+	* const response = await ai.models.embedContent({
+	*  model: 'text-embedding-004',
+	*  contents: [
+	*    'What is your name?',
+	*    'What is your favorite color?',
+	*  ],
+	*  config: {
+	*    outputDimensionality: 64,
+	*  },
+	* });
+	* console.log(response);
+	* ```
+	*/
+	async embedContent(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = embedContentParametersToVertex(this.apiClient, params);
+			path = formatMap("{model}:predict", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = embedContentResponseFromVertex(this.apiClient, apiResponse);
+				const typedResp = new EmbedContentResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		} else {
+			const body = embedContentParametersToMldev(this.apiClient, params);
+			path = formatMap("{model}:batchEmbedContents", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = embedContentResponseFromMldev(this.apiClient, apiResponse);
+				const typedResp = new EmbedContentResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		}
+	}
+	/**
+	* Generates an image based on a text description and configuration.
+	*
+	* @param params - The parameters for generating images.
+	* @return The response from the API.
+	*
+	* @example
+	* ```ts
+	* const response = await ai.models.generateImages({
+	*  model: 'imagen-3.0-generate-002',
+	*  prompt: 'Robot holding a red skateboard',
+	*  config: {
+	*    numberOfImages: 1,
+	*    includeRaiReason: true,
+	*  },
+	* });
+	* console.log(response?.generatedImages?.[0]?.image?.imageBytes);
+	* ```
+	*/
+	async generateImagesInternal(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = generateImagesParametersToVertex(this.apiClient, params);
+			path = formatMap("{model}:predict", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = generateImagesResponseFromVertex(this.apiClient, apiResponse);
+				const typedResp = new GenerateImagesResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		} else {
+			const body = generateImagesParametersToMldev(this.apiClient, params);
+			path = formatMap("{model}:predict", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = generateImagesResponseFromMldev(this.apiClient, apiResponse);
+				const typedResp = new GenerateImagesResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		}
+	}
+	/**
+	* Fetches information about a model by name.
+	*
+	* @example
+	* ```ts
+	* const modelInfo = await ai.models.get({model: 'gemini-2.0-flash'});
+	* ```
+	*/
+	async get(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = getModelParametersToVertex(this.apiClient, params);
+			path = formatMap("{name}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "GET",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = modelFromVertex(this.apiClient, apiResponse);
+				return resp;
+			});
+		} else {
+			const body = getModelParametersToMldev(this.apiClient, params);
+			path = formatMap("{name}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "GET",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = modelFromMldev(this.apiClient, apiResponse);
+				return resp;
+			});
+		}
+	}
+	/**
+	* Counts the number of tokens in the given contents. Multimodal input is
+	* supported for Gemini models.
+	*
+	* @param params - The parameters for counting tokens.
+	* @return The response from the API.
+	*
+	* @example
+	* ```ts
+	* const response = await ai.models.countTokens({
+	*  model: 'gemini-2.0-flash',
+	*  contents: 'The quick brown fox jumps over the lazy dog.'
+	* });
+	* console.log(response);
+	* ```
+	*/
+	async countTokens(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = countTokensParametersToVertex(this.apiClient, params);
+			path = formatMap("{model}:countTokens", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = countTokensResponseFromVertex(this.apiClient, apiResponse);
+				const typedResp = new CountTokensResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		} else {
+			const body = countTokensParametersToMldev(this.apiClient, params);
+			path = formatMap("{model}:countTokens", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = countTokensResponseFromMldev(this.apiClient, apiResponse);
+				const typedResp = new CountTokensResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		}
+	}
+	/**
+	* Given a list of contents, returns a corresponding TokensInfo containing
+	* the list of tokens and list of token ids.
+	*
+	* This method is not supported by the Gemini Developer API.
+	*
+	* @param params - The parameters for computing tokens.
+	* @return The response from the API.
+	*
+	* @example
+	* ```ts
+	* const response = await ai.models.computeTokens({
+	*  model: 'gemini-2.0-flash',
+	*  contents: 'What is your name?'
+	* });
+	* console.log(response);
+	* ```
+	*/
+	async computeTokens(params) {
+		var _a;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = computeTokensParametersToVertex(this.apiClient, params);
+			path = formatMap("{model}:computeTokens", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = computeTokensResponseFromVertex(this.apiClient, apiResponse);
+				const typedResp = new ComputeTokensResponse();
+				Object.assign(typedResp, resp);
+				return typedResp;
+			});
+		} else throw new Error("This method is only supported by the Vertex AI.");
+	}
+	/**
+	*  Generates videos based on a text description and configuration.
+	*
+	* @param params - The parameters for generating videos.
+	* @return A Promise<GenerateVideosOperation> which allows you to track the progress and eventually retrieve the generated videos using the operations.get method.
+	*
+	* @example
+	* ```ts
+	* const operation = await ai.models.generateVideos({
+	*  model: 'veo-2.0-generate-001',
+	*  prompt: 'A neon hologram of a cat driving at top speed',
+	*  config: {
+	*    numberOfVideos: 1
+	* });
+	*
+	* while (!operation.done) {
+	*   await new Promise(resolve => setTimeout(resolve, 10000));
+	*   operation = await ai.operations.getVideosOperation({operation: operation});
+	* }
+	*
+	* console.log(operation.response?.generatedVideos?.[0]?.video?.uri);
+	* ```
+	*/
+	async generateVideos(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = generateVideosParametersToVertex(this.apiClient, params);
+			path = formatMap("{model}:predictLongRunning", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = generateVideosOperationFromVertex$1(this.apiClient, apiResponse);
+				return resp;
+			});
+		} else {
+			const body = generateVideosParametersToMldev(this.apiClient, params);
+			path = formatMap("{model}:predictLongRunning", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = generateVideosOperationFromMldev$1(this.apiClient, apiResponse);
+				return resp;
+			});
+		}
+	}
+};
 /**
 * @license
 * Copyright 2025 Google LLC
@@ -3277,6 +5576,419 @@ function generateVideosOperationFromVertex(apiClient, fromObject) {
 	if (fromResponse != null) setValueByPath(toObject, ["response"], generateVideosResponseFromVertex(apiClient, fromResponse));
 	return toObject;
 }
+/**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+var Operations = class extends BaseModule {
+	constructor(apiClient) {
+		super();
+		this.apiClient = apiClient;
+	}
+	/**
+	* Gets the status of a long-running operation.
+	*
+	* @param parameters The parameters for the get operation request.
+	* @return The updated Operation object, with the latest status or result.
+	*/
+	async getVideosOperation(parameters) {
+		const operation = parameters.operation;
+		const config = parameters.config;
+		if (operation.name === void 0 || operation.name === "") throw new Error("Operation name is required.");
+		if (this.apiClient.isVertexAI()) {
+			const resourceName$1 = operation.name.split("/operations/")[0];
+			let httpOptions = void 0;
+			if (config && "httpOptions" in config) httpOptions = config.httpOptions;
+			return this.fetchPredictVideosOperationInternal({
+				operationName: operation.name,
+				resourceName: resourceName$1,
+				config: { httpOptions }
+			});
+		} else return this.getVideosOperationInternal({
+			operationName: operation.name,
+			config
+		});
+	}
+	async getVideosOperationInternal(params) {
+		var _a, _b;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = getOperationParametersToVertex(this.apiClient, params);
+			path = formatMap("{operationName}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "GET",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = generateVideosOperationFromVertex(this.apiClient, apiResponse);
+				return resp;
+			});
+		} else {
+			const body = getOperationParametersToMldev(this.apiClient, params);
+			path = formatMap("{operationName}", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "GET",
+				httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = generateVideosOperationFromMldev(this.apiClient, apiResponse);
+				return resp;
+			});
+		}
+	}
+	async fetchPredictVideosOperationInternal(params) {
+		var _a;
+		let response;
+		let path = "";
+		let queryParams = {};
+		if (this.apiClient.isVertexAI()) {
+			const body = fetchPredictOperationParametersToVertex(this.apiClient, params);
+			path = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
+			queryParams = body["_query"];
+			delete body["config"];
+			delete body["_url"];
+			delete body["_query"];
+			response = this.apiClient.request({
+				path,
+				queryParams,
+				body: JSON.stringify(body),
+				httpMethod: "POST",
+				httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
+			}).then((httpResponse) => {
+				return httpResponse.json();
+			});
+			return response.then((apiResponse) => {
+				const resp = generateVideosOperationFromVertex(this.apiClient, apiResponse);
+				return resp;
+			});
+		} else throw new Error("This method is only supported by the Vertex AI.");
+	}
+};
+/**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+const CONTENT_TYPE_HEADER = "Content-Type";
+const SERVER_TIMEOUT_HEADER = "X-Server-Timeout";
+const USER_AGENT_HEADER = "User-Agent";
+const GOOGLE_API_CLIENT_HEADER = "x-goog-api-client";
+const SDK_VERSION = "0.9.0";
+const LIBRARY_LABEL = `google-genai-sdk/${SDK_VERSION}`;
+const VERTEX_AI_API_DEFAULT_VERSION = "v1beta1";
+const GOOGLE_AI_API_DEFAULT_VERSION = "v1beta";
+const responseLineRE = /^data: (.*)(?:\n\n|\r\r|\r\n\r\n)/;
+/**
+* Client errors raised by the GenAI API.
+*/
+var ClientError = class extends Error {
+	constructor(message, stackTrace) {
+		if (stackTrace) super(message, { cause: stackTrace });
+		else super(message, { cause: new Error().stack });
+		this.message = message;
+		this.name = "ClientError";
+	}
+};
+/**
+* Server errors raised by the GenAI API.
+*/
+var ServerError = class extends Error {
+	constructor(message, stackTrace) {
+		if (stackTrace) super(message, { cause: stackTrace });
+		else super(message, { cause: new Error().stack });
+		this.message = message;
+		this.name = "ServerError";
+	}
+};
+/**
+* The ApiClient class is used to send requests to the Gemini API or Vertex AI
+* endpoints.
+*/
+var ApiClient = class {
+	constructor(opts) {
+		var _a, _b;
+		this.clientOptions = Object.assign(Object.assign({}, opts), {
+			project: opts.project,
+			location: opts.location,
+			apiKey: opts.apiKey,
+			vertexai: opts.vertexai
+		});
+		const initHttpOptions = {};
+		if (this.clientOptions.vertexai) {
+			initHttpOptions.apiVersion = (_a = this.clientOptions.apiVersion) !== null && _a !== void 0 ? _a : VERTEX_AI_API_DEFAULT_VERSION;
+			if (this.getProject() || this.getLocation()) {
+				initHttpOptions.baseUrl = `https://${this.clientOptions.location}-aiplatform.googleapis.com/`;
+				this.clientOptions.apiKey = void 0;
+			} else {
+				initHttpOptions.baseUrl = `https://aiplatform.googleapis.com/`;
+				this.clientOptions.project = void 0;
+				this.clientOptions.location = void 0;
+			}
+		} else {
+			initHttpOptions.apiVersion = (_b = this.clientOptions.apiVersion) !== null && _b !== void 0 ? _b : GOOGLE_AI_API_DEFAULT_VERSION;
+			initHttpOptions.baseUrl = `https://generativelanguage.googleapis.com/`;
+		}
+		initHttpOptions.headers = this.getDefaultHeaders();
+		this.clientOptions.httpOptions = initHttpOptions;
+		if (opts.httpOptions) this.clientOptions.httpOptions = this.patchHttpOptions(initHttpOptions, opts.httpOptions);
+	}
+	isVertexAI() {
+		var _a;
+		return (_a = this.clientOptions.vertexai) !== null && _a !== void 0 ? _a : false;
+	}
+	getProject() {
+		return this.clientOptions.project;
+	}
+	getLocation() {
+		return this.clientOptions.location;
+	}
+	getApiVersion() {
+		if (this.clientOptions.httpOptions && this.clientOptions.httpOptions.apiVersion !== void 0) return this.clientOptions.httpOptions.apiVersion;
+		throw new Error("API version is not set.");
+	}
+	getBaseUrl() {
+		if (this.clientOptions.httpOptions && this.clientOptions.httpOptions.baseUrl !== void 0) return this.clientOptions.httpOptions.baseUrl;
+		throw new Error("Base URL is not set.");
+	}
+	getRequestUrl() {
+		return this.getRequestUrlInternal(this.clientOptions.httpOptions);
+	}
+	getHeaders() {
+		if (this.clientOptions.httpOptions && this.clientOptions.httpOptions.headers !== void 0) return this.clientOptions.httpOptions.headers;
+		else throw new Error("Headers are not set.");
+	}
+	getRequestUrlInternal(httpOptions) {
+		if (!httpOptions || httpOptions.baseUrl === void 0 || httpOptions.apiVersion === void 0) throw new Error("HTTP options are not correctly set.");
+		const baseUrl = httpOptions.baseUrl.endsWith("/") ? httpOptions.baseUrl.slice(0, -1) : httpOptions.baseUrl;
+		const urlElement = [baseUrl];
+		if (httpOptions.apiVersion && httpOptions.apiVersion !== "") urlElement.push(httpOptions.apiVersion);
+		return urlElement.join("/");
+	}
+	getBaseResourcePath() {
+		return `projects/${this.clientOptions.project}/locations/${this.clientOptions.location}`;
+	}
+	getApiKey() {
+		return this.clientOptions.apiKey;
+	}
+	getWebsocketBaseUrl() {
+		const baseUrl = this.getBaseUrl();
+		const urlParts = new URL(baseUrl);
+		urlParts.protocol = "wss";
+		return urlParts.toString();
+	}
+	setBaseUrl(url) {
+		if (this.clientOptions.httpOptions) this.clientOptions.httpOptions.baseUrl = url;
+		else throw new Error("HTTP options are not correctly set.");
+	}
+	constructUrl(path, httpOptions, prependProjectLocation) {
+		const urlElement = [this.getRequestUrlInternal(httpOptions)];
+		if (prependProjectLocation) urlElement.push(this.getBaseResourcePath());
+		if (path !== "") urlElement.push(path);
+		const url = new URL(`${urlElement.join("/")}`);
+		return url;
+	}
+	shouldPrependVertexProjectPath(request) {
+		if (this.clientOptions.apiKey) return false;
+		if (!this.clientOptions.vertexai) return false;
+		if (request.path.startsWith("projects/")) return false;
+		if (request.httpMethod === "GET" && request.path.startsWith("publishers/google/models")) return false;
+		return true;
+	}
+	async request(request) {
+		let patchedHttpOptions = this.clientOptions.httpOptions;
+		if (request.httpOptions) patchedHttpOptions = this.patchHttpOptions(this.clientOptions.httpOptions, request.httpOptions);
+		const prependProjectLocation = this.shouldPrependVertexProjectPath(request);
+		const url = this.constructUrl(request.path, patchedHttpOptions, prependProjectLocation);
+		if (request.queryParams) for (const [key, value] of Object.entries(request.queryParams)) url.searchParams.append(key, String(value));
+		let requestInit = {};
+		if (request.httpMethod === "GET") {
+			if (request.body && request.body !== "{}") throw new Error("Request body should be empty for GET request, but got non empty request body");
+		} else requestInit.body = request.body;
+		requestInit = await this.includeExtraHttpOptionsToRequestInit(requestInit, patchedHttpOptions);
+		return this.unaryApiCall(url, requestInit, request.httpMethod);
+	}
+	patchHttpOptions(baseHttpOptions, requestHttpOptions) {
+		const patchedHttpOptions = JSON.parse(JSON.stringify(baseHttpOptions));
+		for (const [key, value] of Object.entries(requestHttpOptions)) if (typeof value === "object") patchedHttpOptions[key] = Object.assign(Object.assign({}, patchedHttpOptions[key]), value);
+		else if (value !== void 0) patchedHttpOptions[key] = value;
+		return patchedHttpOptions;
+	}
+	async requestStream(request) {
+		let patchedHttpOptions = this.clientOptions.httpOptions;
+		if (request.httpOptions) patchedHttpOptions = this.patchHttpOptions(this.clientOptions.httpOptions, request.httpOptions);
+		const prependProjectLocation = this.shouldPrependVertexProjectPath(request);
+		const url = this.constructUrl(request.path, patchedHttpOptions, prependProjectLocation);
+		if (!url.searchParams.has("alt") || url.searchParams.get("alt") !== "sse") url.searchParams.set("alt", "sse");
+		let requestInit = {};
+		requestInit.body = request.body;
+		requestInit = await this.includeExtraHttpOptionsToRequestInit(requestInit, patchedHttpOptions);
+		return this.streamApiCall(url, requestInit, request.httpMethod);
+	}
+	async includeExtraHttpOptionsToRequestInit(requestInit, httpOptions) {
+		if (httpOptions && httpOptions.timeout && httpOptions.timeout > 0) {
+			const abortController = new AbortController();
+			const signal = abortController.signal;
+			setTimeout(() => abortController.abort(), httpOptions.timeout);
+			requestInit.signal = signal;
+		}
+		requestInit.headers = await this.getHeadersInternal(httpOptions);
+		return requestInit;
+	}
+	async unaryApiCall(url, requestInit, httpMethod) {
+		return this.apiCall(url.toString(), Object.assign(Object.assign({}, requestInit), { method: httpMethod })).then(async (response) => {
+			await throwErrorIfNotOK(response);
+			return new HttpResponse(response);
+		}).catch((e) => {
+			if (e instanceof Error) throw e;
+			else throw new Error(JSON.stringify(e));
+		});
+	}
+	async streamApiCall(url, requestInit, httpMethod) {
+		return this.apiCall(url.toString(), Object.assign(Object.assign({}, requestInit), { method: httpMethod })).then(async (response) => {
+			await throwErrorIfNotOK(response);
+			return this.processStreamResponse(response);
+		}).catch((e) => {
+			if (e instanceof Error) throw e;
+			else throw new Error(JSON.stringify(e));
+		});
+	}
+	processStreamResponse(response) {
+		var _a;
+		return __asyncGenerator(this, arguments, function* processStreamResponse_1() {
+			const reader = (_a = response === null || response === void 0 ? void 0 : response.body) === null || _a === void 0 ? void 0 : _a.getReader();
+			const decoder = new TextDecoder("utf-8");
+			if (!reader) throw new Error("Response body is empty");
+			try {
+				let buffer = "";
+				while (true) {
+					const { done, value } = yield __await(reader.read());
+					if (done) {
+						if (buffer.trim().length > 0) throw new Error("Incomplete JSON segment at the end");
+						break;
+					}
+					const chunkString = decoder.decode(value);
+					buffer += chunkString;
+					let match = buffer.match(responseLineRE);
+					while (match) {
+						const processedChunkString = match[1];
+						try {
+							const partialResponse = new Response(processedChunkString, {
+								headers: response === null || response === void 0 ? void 0 : response.headers,
+								status: response === null || response === void 0 ? void 0 : response.status,
+								statusText: response === null || response === void 0 ? void 0 : response.statusText
+							});
+							yield yield __await(new HttpResponse(partialResponse));
+							buffer = buffer.slice(match[0].length);
+							match = buffer.match(responseLineRE);
+						} catch (e) {
+							throw new Error(`exception parsing stream chunk ${processedChunkString}. ${e}`);
+						}
+					}
+				}
+			} finally {
+				reader.releaseLock();
+			}
+		});
+	}
+	async apiCall(url, requestInit) {
+		return fetch(url, requestInit).catch((e) => {
+			throw new Error(`exception ${e} sending request`);
+		});
+	}
+	getDefaultHeaders() {
+		const headers = {};
+		const versionHeaderValue = LIBRARY_LABEL + " " + this.clientOptions.userAgentExtra;
+		headers[USER_AGENT_HEADER] = versionHeaderValue;
+		headers[GOOGLE_API_CLIENT_HEADER] = versionHeaderValue;
+		headers[CONTENT_TYPE_HEADER] = "application/json";
+		return headers;
+	}
+	async getHeadersInternal(httpOptions) {
+		const headers = new Headers();
+		if (httpOptions && httpOptions.headers) {
+			for (const [key, value] of Object.entries(httpOptions.headers)) headers.append(key, value);
+			if (httpOptions.timeout && httpOptions.timeout > 0) headers.append(SERVER_TIMEOUT_HEADER, String(Math.ceil(httpOptions.timeout / 1e3)));
+		}
+		await this.clientOptions.auth.addAuthHeaders(headers);
+		return headers;
+	}
+	/**
+	* Uploads a file asynchronously using Gemini API only, this is not supported
+	* in Vertex AI.
+	*
+	* @param file The string path to the file to be uploaded or a Blob object.
+	* @param config Optional parameters specified in the `UploadFileConfig`
+	*     interface. @see {@link UploadFileConfig}
+	* @return A promise that resolves to a `File` object.
+	* @throws An error if called on a Vertex AI client.
+	* @throws An error if the `mimeType` is not provided and can not be inferred,
+	*/
+	async uploadFile(file, config) {
+		var _a;
+		const fileToUpload = {};
+		if (config != null) {
+			fileToUpload.mimeType = config.mimeType;
+			fileToUpload.name = config.name;
+			fileToUpload.displayName = config.displayName;
+		}
+		if (fileToUpload.name && !fileToUpload.name.startsWith("files/")) fileToUpload.name = `files/${fileToUpload.name}`;
+		const uploader = this.clientOptions.uploader;
+		const fileStat = await uploader.stat(file);
+		fileToUpload.sizeBytes = String(fileStat.size);
+		const mimeType = (_a = config === null || config === void 0 ? void 0 : config.mimeType) !== null && _a !== void 0 ? _a : fileStat.type;
+		if (mimeType === void 0 || mimeType === "") throw new Error("Can not determine mimeType. Please provide mimeType in the config.");
+		fileToUpload.mimeType = mimeType;
+		const uploadUrl = await this.fetchUploadUrl(fileToUpload, config);
+		return uploader.upload(file, uploadUrl, this);
+	}
+	async fetchUploadUrl(file, config) {
+		var _a;
+		let httpOptions = {};
+		if (config === null || config === void 0 ? void 0 : config.httpOptions) httpOptions = config.httpOptions;
+		else httpOptions = {
+			apiVersion: "",
+			headers: {
+				"Content-Type": "application/json",
+				"X-Goog-Upload-Protocol": "resumable",
+				"X-Goog-Upload-Command": "start",
+				"X-Goog-Upload-Header-Content-Length": `${file.sizeBytes}`,
+				"X-Goog-Upload-Header-Content-Type": `${file.mimeType}`
+			}
+		};
+		const body = { "file": file };
+		const httpResponse = await this.request({
+			path: formatMap("upload/v1beta/files", body["_url"]),
+			body: JSON.stringify(body),
+			httpMethod: "POST",
+			httpOptions
+		});
+		if (!httpResponse || !(httpResponse === null || httpResponse === void 0 ? void 0 : httpResponse.headers)) throw new Error("Server did not return an HttpResponse or the returned HttpResponse did not have headers.");
+		const uploadUrl = (_a = httpResponse === null || httpResponse === void 0 ? void 0 : httpResponse.headers) === null || _a === void 0 ? void 0 : _a["x-goog-upload-url"];
+		if (uploadUrl === void 0) throw new Error("Failed to get upload url. Server did not return the x-google-upload-url in the headers");
+		return uploadUrl;
+	}
+};
 async function throwErrorIfNotOK(response) {
 	var _a;
 	if (response === void 0) throw new ServerError("response is undefined");
@@ -3301,6 +6013,7 @@ async function throwErrorIfNotOK(response) {
 		throw new Error(errorMessage);
 	}
 }
+const MAX_CHUNK_SIZE = 1024 * 1024 * 8;
 async function uploadBlob(file, uploadUrl, apiClient) {
 	var _a, _b;
 	let fileSize = 0;
@@ -3341,2665 +6054,142 @@ async function getBlobStat(file) {
 	};
 	return fileStat;
 }
-var BaseModule, PagedItem, Pager, Outcome, Language, Type, HarmCategory, HarmBlockMethod, HarmBlockThreshold, Mode, FinishReason, HarmProbability, HarmSeverity, BlockedReason, TrafficType, Modality, MediaResolution, FeatureSelectionPreference, DynamicRetrievalConfigMode, FunctionCallingConfigMode, SafetyFilterLevel, PersonGeneration, ImagePromptLanguage, FileState, FileSource, MaskReferenceMode, ControlReferenceType, SubjectReferenceType, MediaModality, StartSensitivity, EndSensitivity, ActivityHandling, TurnCoverage, GenerateContentResponse, EmbedContentResponse, GenerateImagesResponse, CountTokensResponse, ComputeTokensResponse, DeleteCachedContentResponse, ListCachedContentsResponse, ListFilesResponse, HttpResponse, CreateFileResponse, DeleteFileResponse, Caches, Chats, Chat, Files, FUNCTION_RESPONSE_REQUIRES_ID, Live, defaultLiveSendClientContentParamerters, Session, Models, Operations, CONTENT_TYPE_HEADER, SERVER_TIMEOUT_HEADER, USER_AGENT_HEADER, GOOGLE_API_CLIENT_HEADER, SDK_VERSION, LIBRARY_LABEL, VERTEX_AI_API_DEFAULT_VERSION, GOOGLE_AI_API_DEFAULT_VERSION, responseLineRE, ClientError, ServerError, ApiClient, MAX_CHUNK_SIZE, BrowserUploader, BrowserWebSocketFactory, BrowserWebSocket, GOOGLE_API_KEY_HEADER, WebAuth, LANGUAGE_LABEL_PREFIX, GoogleGenAI;
-var init_web = __esm({ "node_modules/@google/genai/dist/web/index.mjs"() {
-	BaseModule = class {};
-	(function(PagedItem$1) {
-		PagedItem$1["PAGED_ITEM_BATCH_JOBS"] = "batchJobs";
-		PagedItem$1["PAGED_ITEM_MODELS"] = "models";
-		PagedItem$1["PAGED_ITEM_TUNING_JOBS"] = "tuningJobs";
-		PagedItem$1["PAGED_ITEM_FILES"] = "files";
-		PagedItem$1["PAGED_ITEM_CACHED_CONTENTS"] = "cachedContents";
-	})(PagedItem || (PagedItem = {}));
-	Pager = class {
-		constructor(name, request, response, params) {
-			this.pageInternal = [];
-			this.paramsInternal = {};
-			this.requestInternal = request;
-			this.init(name, response, params);
-		}
-		init(name, response, params) {
-			var _a, _b;
-			this.nameInternal = name;
-			this.pageInternal = response[this.nameInternal] || [];
-			this.idxInternal = 0;
-			let requestParams = { config: {} };
-			if (!params) requestParams = { config: {} };
-			else if (typeof params === "object") requestParams = Object.assign({}, params);
-			else requestParams = params;
-			if (requestParams["config"]) requestParams["config"]["pageToken"] = response["nextPageToken"];
-			this.paramsInternal = requestParams;
-			this.pageInternalSize = (_b = (_a = requestParams["config"]) === null || _a === void 0 ? void 0 : _a["pageSize"]) !== null && _b !== void 0 ? _b : this.pageInternal.length;
-		}
-		initNextPage(response) {
-			this.init(this.nameInternal, response, this.paramsInternal);
-		}
-		/**
-		* Returns the current page, which is a list of items.
-		*
-		* @remarks
-		* The first page is retrieved when the pager is created. The returned list of
-		* items could be a subset of the entire list.
-		*/
-		get page() {
-			return this.pageInternal;
-		}
-		/**
-		* Returns the type of paged item (for example, ``batch_jobs``).
-		*/
-		get name() {
-			return this.nameInternal;
-		}
-		/**
-		* Returns the length of the page fetched each time by this pager.
-		*
-		* @remarks
-		* The number of items in the page is less than or equal to the page length.
-		*/
-		get pageSize() {
-			return this.pageInternalSize;
-		}
-		/**
-		* Returns the parameters when making the API request for the next page.
-		*
-		* @remarks
-		* Parameters contain a set of optional configs that can be
-		* used to customize the API request. For example, the `pageToken` parameter
-		* contains the token to request the next page.
-		*/
-		get params() {
-			return this.paramsInternal;
-		}
-		/**
-		* Returns the total number of items in the current page.
-		*/
-		get pageLength() {
-			return this.pageInternal.length;
-		}
-		/**
-		* Returns the item at the given index.
-		*/
-		getItem(index) {
-			return this.pageInternal[index];
-		}
-		/**
-		* Returns an async iterator that support iterating through all items
-		* retrieved from the API.
-		*
-		* @remarks
-		* The iterator will automatically fetch the next page if there are more items
-		* to fetch from the API.
-		*
-		* @example
-		*
-		* ```ts
-		* const pager = await ai.files.list({config: {pageSize: 10}});
-		* for await (const file of pager) {
-		*   console.log(file.name);
-		* }
-		* ```
-		*/
-		[Symbol.asyncIterator]() {
-			return {
-				next: async () => {
-					if (this.idxInternal >= this.pageLength) if (this.hasNextPage()) await this.nextPage();
-					else return {
-						value: void 0,
-						done: true
-					};
-					const item = this.getItem(this.idxInternal);
-					this.idxInternal += 1;
-					return {
-						value: item,
-						done: false
-					};
-				},
-				return: async () => {
-					return {
-						value: void 0,
-						done: true
-					};
-				}
-			};
-		}
-		/**
-		* Fetches the next page of items. This makes a new API request.
-		*
-		* @throws {Error} If there are no more pages to fetch.
-		*
-		* @example
-		*
-		* ```ts
-		* const pager = await ai.files.list({config: {pageSize: 10}});
-		* let page = pager.page;
-		* while (true) {
-		*   for (const file of page) {
-		*     console.log(file.name);
-		*   }
-		*   if (!pager.hasNextPage()) {
-		*     break;
-		*   }
-		*   page = await pager.nextPage();
-		* }
-		* ```
-		*/
-		async nextPage() {
-			if (!this.hasNextPage()) throw new Error("No more pages to fetch.");
-			const response = await this.requestInternal(this.params);
-			this.initNextPage(response);
-			return this.page;
-		}
-		/**
-		* Returns true if there are more pages to fetch from the API.
-		*/
-		hasNextPage() {
-			var _a;
-			if (((_a = this.params["config"]) === null || _a === void 0 ? void 0 : _a["pageToken"]) !== void 0) return true;
-			return false;
-		}
-	};
-	(function(Outcome$1) {
-		Outcome$1["OUTCOME_UNSPECIFIED"] = "OUTCOME_UNSPECIFIED";
-		Outcome$1["OUTCOME_OK"] = "OUTCOME_OK";
-		Outcome$1["OUTCOME_FAILED"] = "OUTCOME_FAILED";
-		Outcome$1["OUTCOME_DEADLINE_EXCEEDED"] = "OUTCOME_DEADLINE_EXCEEDED";
-	})(Outcome || (Outcome = {}));
-	(function(Language$1) {
-		Language$1["LANGUAGE_UNSPECIFIED"] = "LANGUAGE_UNSPECIFIED";
-		Language$1["PYTHON"] = "PYTHON";
-	})(Language || (Language = {}));
-	(function(Type$1) {
-		Type$1["TYPE_UNSPECIFIED"] = "TYPE_UNSPECIFIED";
-		Type$1["STRING"] = "STRING";
-		Type$1["NUMBER"] = "NUMBER";
-		Type$1["INTEGER"] = "INTEGER";
-		Type$1["BOOLEAN"] = "BOOLEAN";
-		Type$1["ARRAY"] = "ARRAY";
-		Type$1["OBJECT"] = "OBJECT";
-	})(Type || (Type = {}));
-	(function(HarmCategory$1) {
-		HarmCategory$1["HARM_CATEGORY_UNSPECIFIED"] = "HARM_CATEGORY_UNSPECIFIED";
-		HarmCategory$1["HARM_CATEGORY_HATE_SPEECH"] = "HARM_CATEGORY_HATE_SPEECH";
-		HarmCategory$1["HARM_CATEGORY_DANGEROUS_CONTENT"] = "HARM_CATEGORY_DANGEROUS_CONTENT";
-		HarmCategory$1["HARM_CATEGORY_HARASSMENT"] = "HARM_CATEGORY_HARASSMENT";
-		HarmCategory$1["HARM_CATEGORY_SEXUALLY_EXPLICIT"] = "HARM_CATEGORY_SEXUALLY_EXPLICIT";
-		HarmCategory$1["HARM_CATEGORY_CIVIC_INTEGRITY"] = "HARM_CATEGORY_CIVIC_INTEGRITY";
-	})(HarmCategory || (HarmCategory = {}));
-	(function(HarmBlockMethod$1) {
-		HarmBlockMethod$1["HARM_BLOCK_METHOD_UNSPECIFIED"] = "HARM_BLOCK_METHOD_UNSPECIFIED";
-		HarmBlockMethod$1["SEVERITY"] = "SEVERITY";
-		HarmBlockMethod$1["PROBABILITY"] = "PROBABILITY";
-	})(HarmBlockMethod || (HarmBlockMethod = {}));
-	(function(HarmBlockThreshold$1) {
-		HarmBlockThreshold$1["HARM_BLOCK_THRESHOLD_UNSPECIFIED"] = "HARM_BLOCK_THRESHOLD_UNSPECIFIED";
-		HarmBlockThreshold$1["BLOCK_LOW_AND_ABOVE"] = "BLOCK_LOW_AND_ABOVE";
-		HarmBlockThreshold$1["BLOCK_MEDIUM_AND_ABOVE"] = "BLOCK_MEDIUM_AND_ABOVE";
-		HarmBlockThreshold$1["BLOCK_ONLY_HIGH"] = "BLOCK_ONLY_HIGH";
-		HarmBlockThreshold$1["BLOCK_NONE"] = "BLOCK_NONE";
-		HarmBlockThreshold$1["OFF"] = "OFF";
-	})(HarmBlockThreshold || (HarmBlockThreshold = {}));
-	(function(Mode$1) {
-		Mode$1["MODE_UNSPECIFIED"] = "MODE_UNSPECIFIED";
-		Mode$1["MODE_DYNAMIC"] = "MODE_DYNAMIC";
-	})(Mode || (Mode = {}));
-	(function(FinishReason$1) {
-		FinishReason$1["FINISH_REASON_UNSPECIFIED"] = "FINISH_REASON_UNSPECIFIED";
-		FinishReason$1["STOP"] = "STOP";
-		FinishReason$1["MAX_TOKENS"] = "MAX_TOKENS";
-		FinishReason$1["SAFETY"] = "SAFETY";
-		FinishReason$1["RECITATION"] = "RECITATION";
-		FinishReason$1["OTHER"] = "OTHER";
-		FinishReason$1["BLOCKLIST"] = "BLOCKLIST";
-		FinishReason$1["PROHIBITED_CONTENT"] = "PROHIBITED_CONTENT";
-		FinishReason$1["SPII"] = "SPII";
-		FinishReason$1["MALFORMED_FUNCTION_CALL"] = "MALFORMED_FUNCTION_CALL";
-		FinishReason$1["IMAGE_SAFETY"] = "IMAGE_SAFETY";
-	})(FinishReason || (FinishReason = {}));
-	(function(HarmProbability$1) {
-		HarmProbability$1["HARM_PROBABILITY_UNSPECIFIED"] = "HARM_PROBABILITY_UNSPECIFIED";
-		HarmProbability$1["NEGLIGIBLE"] = "NEGLIGIBLE";
-		HarmProbability$1["LOW"] = "LOW";
-		HarmProbability$1["MEDIUM"] = "MEDIUM";
-		HarmProbability$1["HIGH"] = "HIGH";
-	})(HarmProbability || (HarmProbability = {}));
-	(function(HarmSeverity$1) {
-		HarmSeverity$1["HARM_SEVERITY_UNSPECIFIED"] = "HARM_SEVERITY_UNSPECIFIED";
-		HarmSeverity$1["HARM_SEVERITY_NEGLIGIBLE"] = "HARM_SEVERITY_NEGLIGIBLE";
-		HarmSeverity$1["HARM_SEVERITY_LOW"] = "HARM_SEVERITY_LOW";
-		HarmSeverity$1["HARM_SEVERITY_MEDIUM"] = "HARM_SEVERITY_MEDIUM";
-		HarmSeverity$1["HARM_SEVERITY_HIGH"] = "HARM_SEVERITY_HIGH";
-	})(HarmSeverity || (HarmSeverity = {}));
-	(function(BlockedReason$1) {
-		BlockedReason$1["BLOCKED_REASON_UNSPECIFIED"] = "BLOCKED_REASON_UNSPECIFIED";
-		BlockedReason$1["SAFETY"] = "SAFETY";
-		BlockedReason$1["OTHER"] = "OTHER";
-		BlockedReason$1["BLOCKLIST"] = "BLOCKLIST";
-		BlockedReason$1["PROHIBITED_CONTENT"] = "PROHIBITED_CONTENT";
-	})(BlockedReason || (BlockedReason = {}));
-	(function(TrafficType$1) {
-		TrafficType$1["TRAFFIC_TYPE_UNSPECIFIED"] = "TRAFFIC_TYPE_UNSPECIFIED";
-		TrafficType$1["ON_DEMAND"] = "ON_DEMAND";
-		TrafficType$1["PROVISIONED_THROUGHPUT"] = "PROVISIONED_THROUGHPUT";
-	})(TrafficType || (TrafficType = {}));
-	(function(Modality$1) {
-		Modality$1["MODALITY_UNSPECIFIED"] = "MODALITY_UNSPECIFIED";
-		Modality$1["TEXT"] = "TEXT";
-		Modality$1["IMAGE"] = "IMAGE";
-		Modality$1["AUDIO"] = "AUDIO";
-	})(Modality || (Modality = {}));
-	(function(MediaResolution$1) {
-		MediaResolution$1["MEDIA_RESOLUTION_UNSPECIFIED"] = "MEDIA_RESOLUTION_UNSPECIFIED";
-		MediaResolution$1["MEDIA_RESOLUTION_LOW"] = "MEDIA_RESOLUTION_LOW";
-		MediaResolution$1["MEDIA_RESOLUTION_MEDIUM"] = "MEDIA_RESOLUTION_MEDIUM";
-		MediaResolution$1["MEDIA_RESOLUTION_HIGH"] = "MEDIA_RESOLUTION_HIGH";
-	})(MediaResolution || (MediaResolution = {}));
-	(function(FeatureSelectionPreference$1) {
-		FeatureSelectionPreference$1["FEATURE_SELECTION_PREFERENCE_UNSPECIFIED"] = "FEATURE_SELECTION_PREFERENCE_UNSPECIFIED";
-		FeatureSelectionPreference$1["PRIORITIZE_QUALITY"] = "PRIORITIZE_QUALITY";
-		FeatureSelectionPreference$1["BALANCED"] = "BALANCED";
-		FeatureSelectionPreference$1["PRIORITIZE_COST"] = "PRIORITIZE_COST";
-	})(FeatureSelectionPreference || (FeatureSelectionPreference = {}));
-	(function(DynamicRetrievalConfigMode$1) {
-		DynamicRetrievalConfigMode$1["MODE_UNSPECIFIED"] = "MODE_UNSPECIFIED";
-		DynamicRetrievalConfigMode$1["MODE_DYNAMIC"] = "MODE_DYNAMIC";
-	})(DynamicRetrievalConfigMode || (DynamicRetrievalConfigMode = {}));
-	(function(FunctionCallingConfigMode$1) {
-		FunctionCallingConfigMode$1["MODE_UNSPECIFIED"] = "MODE_UNSPECIFIED";
-		FunctionCallingConfigMode$1["AUTO"] = "AUTO";
-		FunctionCallingConfigMode$1["ANY"] = "ANY";
-		FunctionCallingConfigMode$1["NONE"] = "NONE";
-	})(FunctionCallingConfigMode || (FunctionCallingConfigMode = {}));
-	(function(SafetyFilterLevel$1) {
-		SafetyFilterLevel$1["BLOCK_LOW_AND_ABOVE"] = "BLOCK_LOW_AND_ABOVE";
-		SafetyFilterLevel$1["BLOCK_MEDIUM_AND_ABOVE"] = "BLOCK_MEDIUM_AND_ABOVE";
-		SafetyFilterLevel$1["BLOCK_ONLY_HIGH"] = "BLOCK_ONLY_HIGH";
-		SafetyFilterLevel$1["BLOCK_NONE"] = "BLOCK_NONE";
-	})(SafetyFilterLevel || (SafetyFilterLevel = {}));
-	(function(PersonGeneration$1) {
-		PersonGeneration$1["DONT_ALLOW"] = "DONT_ALLOW";
-		PersonGeneration$1["ALLOW_ADULT"] = "ALLOW_ADULT";
-		PersonGeneration$1["ALLOW_ALL"] = "ALLOW_ALL";
-	})(PersonGeneration || (PersonGeneration = {}));
-	(function(ImagePromptLanguage$1) {
-		ImagePromptLanguage$1["auto"] = "auto";
-		ImagePromptLanguage$1["en"] = "en";
-		ImagePromptLanguage$1["ja"] = "ja";
-		ImagePromptLanguage$1["ko"] = "ko";
-		ImagePromptLanguage$1["hi"] = "hi";
-	})(ImagePromptLanguage || (ImagePromptLanguage = {}));
-	(function(FileState$1) {
-		FileState$1["STATE_UNSPECIFIED"] = "STATE_UNSPECIFIED";
-		FileState$1["PROCESSING"] = "PROCESSING";
-		FileState$1["ACTIVE"] = "ACTIVE";
-		FileState$1["FAILED"] = "FAILED";
-	})(FileState || (FileState = {}));
-	(function(FileSource$1) {
-		FileSource$1["SOURCE_UNSPECIFIED"] = "SOURCE_UNSPECIFIED";
-		FileSource$1["UPLOADED"] = "UPLOADED";
-		FileSource$1["GENERATED"] = "GENERATED";
-	})(FileSource || (FileSource = {}));
-	(function(MaskReferenceMode$1) {
-		MaskReferenceMode$1["MASK_MODE_DEFAULT"] = "MASK_MODE_DEFAULT";
-		MaskReferenceMode$1["MASK_MODE_USER_PROVIDED"] = "MASK_MODE_USER_PROVIDED";
-		MaskReferenceMode$1["MASK_MODE_BACKGROUND"] = "MASK_MODE_BACKGROUND";
-		MaskReferenceMode$1["MASK_MODE_FOREGROUND"] = "MASK_MODE_FOREGROUND";
-		MaskReferenceMode$1["MASK_MODE_SEMANTIC"] = "MASK_MODE_SEMANTIC";
-	})(MaskReferenceMode || (MaskReferenceMode = {}));
-	(function(ControlReferenceType$1) {
-		ControlReferenceType$1["CONTROL_TYPE_DEFAULT"] = "CONTROL_TYPE_DEFAULT";
-		ControlReferenceType$1["CONTROL_TYPE_CANNY"] = "CONTROL_TYPE_CANNY";
-		ControlReferenceType$1["CONTROL_TYPE_SCRIBBLE"] = "CONTROL_TYPE_SCRIBBLE";
-		ControlReferenceType$1["CONTROL_TYPE_FACE_MESH"] = "CONTROL_TYPE_FACE_MESH";
-	})(ControlReferenceType || (ControlReferenceType = {}));
-	(function(SubjectReferenceType$1) {
-		SubjectReferenceType$1["SUBJECT_TYPE_DEFAULT"] = "SUBJECT_TYPE_DEFAULT";
-		SubjectReferenceType$1["SUBJECT_TYPE_PERSON"] = "SUBJECT_TYPE_PERSON";
-		SubjectReferenceType$1["SUBJECT_TYPE_ANIMAL"] = "SUBJECT_TYPE_ANIMAL";
-		SubjectReferenceType$1["SUBJECT_TYPE_PRODUCT"] = "SUBJECT_TYPE_PRODUCT";
-	})(SubjectReferenceType || (SubjectReferenceType = {}));
-	(function(MediaModality$1) {
-		MediaModality$1["MODALITY_UNSPECIFIED"] = "MODALITY_UNSPECIFIED";
-		MediaModality$1["TEXT"] = "TEXT";
-		MediaModality$1["IMAGE"] = "IMAGE";
-		MediaModality$1["VIDEO"] = "VIDEO";
-		MediaModality$1["AUDIO"] = "AUDIO";
-		MediaModality$1["DOCUMENT"] = "DOCUMENT";
-	})(MediaModality || (MediaModality = {}));
-	(function(StartSensitivity$1) {
-		StartSensitivity$1["START_SENSITIVITY_UNSPECIFIED"] = "START_SENSITIVITY_UNSPECIFIED";
-		StartSensitivity$1["START_SENSITIVITY_HIGH"] = "START_SENSITIVITY_HIGH";
-		StartSensitivity$1["START_SENSITIVITY_LOW"] = "START_SENSITIVITY_LOW";
-	})(StartSensitivity || (StartSensitivity = {}));
-	(function(EndSensitivity$1) {
-		EndSensitivity$1["END_SENSITIVITY_UNSPECIFIED"] = "END_SENSITIVITY_UNSPECIFIED";
-		EndSensitivity$1["END_SENSITIVITY_HIGH"] = "END_SENSITIVITY_HIGH";
-		EndSensitivity$1["END_SENSITIVITY_LOW"] = "END_SENSITIVITY_LOW";
-	})(EndSensitivity || (EndSensitivity = {}));
-	(function(ActivityHandling$1) {
-		ActivityHandling$1["ACTIVITY_HANDLING_UNSPECIFIED"] = "ACTIVITY_HANDLING_UNSPECIFIED";
-		ActivityHandling$1["START_OF_ACTIVITY_INTERRUPTS"] = "START_OF_ACTIVITY_INTERRUPTS";
-		ActivityHandling$1["NO_INTERRUPTION"] = "NO_INTERRUPTION";
-	})(ActivityHandling || (ActivityHandling = {}));
-	(function(TurnCoverage$1) {
-		TurnCoverage$1["TURN_COVERAGE_UNSPECIFIED"] = "TURN_COVERAGE_UNSPECIFIED";
-		TurnCoverage$1["TURN_INCLUDES_ONLY_ACTIVITY"] = "TURN_INCLUDES_ONLY_ACTIVITY";
-		TurnCoverage$1["TURN_INCLUDES_ALL_INPUT"] = "TURN_INCLUDES_ALL_INPUT";
-	})(TurnCoverage || (TurnCoverage = {}));
-	GenerateContentResponse = class {
-		/**
-		* Returns the concatenation of all text parts from the first candidate in the response.
-		*
-		* @remarks
-		* If there are multiple candidates in the response, the text from the first
-		* one will be returned.
-		* If there are non-text parts in the response, the concatenation of all text
-		* parts will be returned, and a warning will be logged.
-		* If there are thought parts in the response, the concatenation of all text
-		* parts excluding the thought parts will be returned.
-		*
-		* @example
-		* ```ts
-		* const response = await ai.models.generateContent({
-		*   model: 'gemini-2.0-flash',
-		*   contents:
-		*     'Why is the sky blue?',
-		* });
-		*
-		* console.debug(response.text);
-		* ```
-		*/
-		get text() {
-			var _a, _b, _c, _d, _e, _f, _g, _h;
-			if (((_d = (_c = (_b = (_a = this.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.parts) === null || _d === void 0 ? void 0 : _d.length) === 0) return void 0;
-			if (this.candidates && this.candidates.length > 1) console.warn("there are multiple candidates in the response, returning text from the first one.");
-			let text = "";
-			let anyTextPartText = false;
-			const nonTextParts = [];
-			for (const part of (_h = (_g = (_f = (_e = this.candidates) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.content) === null || _g === void 0 ? void 0 : _g.parts) !== null && _h !== void 0 ? _h : []) {
-				for (const [fieldName, fieldValue] of Object.entries(part)) if (fieldName !== "text" && fieldName !== "thought" && (fieldValue !== null || fieldValue !== void 0)) nonTextParts.push(fieldName);
-				if (typeof part.text === "string") {
-					if (typeof part.thought === "boolean" && part.thought) continue;
-					anyTextPartText = true;
-					text += part.text;
-				}
-			}
-			if (nonTextParts.length > 0) console.warn(`there are non-text parts ${nonTextParts} in the response, returning concatenation of all text parts. Please refer to the non text parts for a full response from model.`);
-			return anyTextPartText ? text : void 0;
-		}
-		/**
-		* Returns the function calls from the first candidate in the response.
-		*
-		* @remarks
-		* If there are multiple candidates in the response, the function calls from
-		* the first one will be returned.
-		* If there are no function calls in the response, undefined will be returned.
-		*
-		* @example
-		* ```ts
-		* const controlLightFunctionDeclaration: FunctionDeclaration = {
-		*   name: 'controlLight',
-		*   parameters: {
-		*   type: Type.OBJECT,
-		*   description: 'Set the brightness and color temperature of a room light.',
-		*   properties: {
-		*     brightness: {
-		*       type: Type.NUMBER,
-		*       description:
-		*         'Light level from 0 to 100. Zero is off and 100 is full brightness.',
-		*     },
-		*     colorTemperature: {
-		*       type: Type.STRING,
-		*       description:
-		*         'Color temperature of the light fixture which can be `daylight`, `cool` or `warm`.',
-		*     },
-		*   },
-		*   required: ['brightness', 'colorTemperature'],
-		*  };
-		*  const response = await ai.models.generateContent({
-		*     model: 'gemini-2.0-flash',
-		*     contents: 'Dim the lights so the room feels cozy and warm.',
-		*     config: {
-		*       tools: [{functionDeclarations: [controlLightFunctionDeclaration]}],
-		*       toolConfig: {
-		*         functionCallingConfig: {
-		*           mode: FunctionCallingConfigMode.ANY,
-		*           allowedFunctionNames: ['controlLight'],
-		*         },
-		*       },
-		*     },
-		*   });
-		*  console.debug(JSON.stringify(response.functionCalls));
-		* ```
-		*/
-		get functionCalls() {
-			var _a, _b, _c, _d, _e, _f, _g, _h;
-			if (((_d = (_c = (_b = (_a = this.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.parts) === null || _d === void 0 ? void 0 : _d.length) === 0) return void 0;
-			if (this.candidates && this.candidates.length > 1) console.warn("there are multiple candidates in the response, returning function calls from the first one.");
-			const functionCalls = (_h = (_g = (_f = (_e = this.candidates) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.content) === null || _g === void 0 ? void 0 : _g.parts) === null || _h === void 0 ? void 0 : _h.filter((part) => part.functionCall).map((part) => part.functionCall).filter((functionCall) => functionCall !== void 0);
-			if ((functionCalls === null || functionCalls === void 0 ? void 0 : functionCalls.length) === 0) return void 0;
-			return functionCalls;
-		}
-		/**
-		* Returns the first executable code from the first candidate in the response.
-		*
-		* @remarks
-		* If there are multiple candidates in the response, the executable code from
-		* the first one will be returned.
-		* If there are no executable code in the response, undefined will be
-		* returned.
-		*
-		* @example
-		* ```ts
-		* const response = await ai.models.generateContent({
-		*   model: 'gemini-2.0-flash',
-		*   contents:
-		*     'What is the sum of the first 50 prime numbers? Generate and run code for the calculation, and make sure you get all 50.'
-		*   config: {
-		*     tools: [{codeExecution: {}}],
-		*   },
-		* });
-		*
-		* console.debug(response.executableCode);
-		* ```
-		*/
-		get executableCode() {
-			var _a, _b, _c, _d, _e, _f, _g, _h, _j;
-			if (((_d = (_c = (_b = (_a = this.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.parts) === null || _d === void 0 ? void 0 : _d.length) === 0) return void 0;
-			if (this.candidates && this.candidates.length > 1) console.warn("there are multiple candidates in the response, returning executable code from the first one.");
-			const executableCode = (_h = (_g = (_f = (_e = this.candidates) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.content) === null || _g === void 0 ? void 0 : _g.parts) === null || _h === void 0 ? void 0 : _h.filter((part) => part.executableCode).map((part) => part.executableCode).filter((executableCode$1) => executableCode$1 !== void 0);
-			if ((executableCode === null || executableCode === void 0 ? void 0 : executableCode.length) === 0) return void 0;
-			return (_j = executableCode === null || executableCode === void 0 ? void 0 : executableCode[0]) === null || _j === void 0 ? void 0 : _j.code;
-		}
-		/**
-		* Returns the first code execution result from the first candidate in the response.
-		*
-		* @remarks
-		* If there are multiple candidates in the response, the code execution result from
-		* the first one will be returned.
-		* If there are no code execution result in the response, undefined will be returned.
-		*
-		* @example
-		* ```ts
-		* const response = await ai.models.generateContent({
-		*   model: 'gemini-2.0-flash',
-		*   contents:
-		*     'What is the sum of the first 50 prime numbers? Generate and run code for the calculation, and make sure you get all 50.'
-		*   config: {
-		*     tools: [{codeExecution: {}}],
-		*   },
-		* });
-		*
-		* console.debug(response.codeExecutionResult);
-		* ```
-		*/
-		get codeExecutionResult() {
-			var _a, _b, _c, _d, _e, _f, _g, _h, _j;
-			if (((_d = (_c = (_b = (_a = this.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.parts) === null || _d === void 0 ? void 0 : _d.length) === 0) return void 0;
-			if (this.candidates && this.candidates.length > 1) console.warn("there are multiple candidates in the response, returning code execution result from the first one.");
-			const codeExecutionResult = (_h = (_g = (_f = (_e = this.candidates) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.content) === null || _g === void 0 ? void 0 : _g.parts) === null || _h === void 0 ? void 0 : _h.filter((part) => part.codeExecutionResult).map((part) => part.codeExecutionResult).filter((codeExecutionResult$1) => codeExecutionResult$1 !== void 0);
-			if ((codeExecutionResult === null || codeExecutionResult === void 0 ? void 0 : codeExecutionResult.length) === 0) return void 0;
-			return (_j = codeExecutionResult === null || codeExecutionResult === void 0 ? void 0 : codeExecutionResult[0]) === null || _j === void 0 ? void 0 : _j.output;
-		}
-	};
-	EmbedContentResponse = class {};
-	GenerateImagesResponse = class {};
-	CountTokensResponse = class {};
-	ComputeTokensResponse = class {};
-	DeleteCachedContentResponse = class {};
-	ListCachedContentsResponse = class {};
-	ListFilesResponse = class {};
-	HttpResponse = class {
-		constructor(response) {
-			const headers = {};
-			for (const pair of response.headers.entries()) headers[pair[0]] = pair[1];
-			this.headers = headers;
-			this.responseInternal = response;
-		}
-		json() {
-			return this.responseInternal.json();
-		}
-	};
-	CreateFileResponse = class {};
-	DeleteFileResponse = class {};
-	Caches = class extends BaseModule {
-		constructor(apiClient) {
-			super();
-			this.apiClient = apiClient;
-			/**
-			* Lists cached content configurations.
-			*
-			* @param params - The parameters for the list request.
-			* @return The paginated results of the list of cached contents.
-			*
-			* @example
-			* ```ts
-			* const cachedContents = await ai.caches.list({config: {'pageSize': 2}});
-			* for (const cachedContent of cachedContents) {
-			*   console.log(cachedContent);
-			* }
-			* ```
-			*/
-			this.list = async (params = {}) => {
-				return new Pager(PagedItem.PAGED_ITEM_CACHED_CONTENTS, (x) => this.listInternal(x), await this.listInternal(params), params);
-			};
-		}
-		/**
-		* Creates a cached contents resource.
-		*
-		* @remarks
-		* Context caching is only supported for specific models. See [Gemini
-		* Developer API reference](https://ai.google.dev/gemini-api/docs/caching?lang=node/context-cac)
-		* and [Vertex AI reference](https://cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview#supported_models)
-		* for more information.
-		*
-		* @param params - The parameters for the create request.
-		* @return The created cached content.
-		*
-		* @example
-		* ```ts
-		* const contents = ...; // Initialize the content to cache.
-		* const response = await ai.caches.create({
-		*   model: 'gemini-1.5-flash',
-		*   config: {
-		*    'contents': contents,
-		*    'displayName': 'test cache',
-		*    'systemInstruction': 'What is the sum of the two pdfs?',
-		*    'ttl': '86400s',
-		*  }
-		* });
-		* ```
-		*/
-		async create(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = createCachedContentParametersToVertex(this.apiClient, params);
-				path = formatMap("cachedContents", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = cachedContentFromVertex(this.apiClient, apiResponse);
-					return resp;
-				});
-			} else {
-				const body = createCachedContentParametersToMldev(this.apiClient, params);
-				path = formatMap("cachedContents", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = cachedContentFromMldev(this.apiClient, apiResponse);
-					return resp;
-				});
-			}
-		}
-		/**
-		* Gets cached content configurations.
-		*
-		* @param params - The parameters for the get request.
-		* @return The cached content.
-		*
-		* @example
-		* ```ts
-		* await ai.caches.get({name: 'gemini-1.5-flash'});
-		* ```
-		*/
-		async get(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = getCachedContentParametersToVertex(this.apiClient, params);
-				path = formatMap("{name}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "GET",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = cachedContentFromVertex(this.apiClient, apiResponse);
-					return resp;
-				});
-			} else {
-				const body = getCachedContentParametersToMldev(this.apiClient, params);
-				path = formatMap("{name}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "GET",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = cachedContentFromMldev(this.apiClient, apiResponse);
-					return resp;
-				});
-			}
-		}
-		/**
-		* Deletes cached content.
-		*
-		* @param params - The parameters for the delete request.
-		* @return The empty response returned by the API.
-		*
-		* @example
-		* ```ts
-		* await ai.caches.delete({name: 'gemini-1.5-flash'});
-		* ```
-		*/
-		async delete(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = deleteCachedContentParametersToVertex(this.apiClient, params);
-				path = formatMap("{name}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "DELETE",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then(() => {
-					const resp = deleteCachedContentResponseFromVertex();
-					const typedResp = new DeleteCachedContentResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			} else {
-				const body = deleteCachedContentParametersToMldev(this.apiClient, params);
-				path = formatMap("{name}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "DELETE",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then(() => {
-					const resp = deleteCachedContentResponseFromMldev();
-					const typedResp = new DeleteCachedContentResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			}
-		}
-		/**
-		* Updates cached content configurations.
-		*
-		* @param params - The parameters for the update request.
-		* @return The updated cached content.
-		*
-		* @example
-		* ```ts
-		* const response = await ai.caches.update({
-		*   name: 'gemini-1.5-flash',
-		*   config: {'ttl': '7600s'}
-		* });
-		* ```
-		*/
-		async update(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = updateCachedContentParametersToVertex(this.apiClient, params);
-				path = formatMap("{name}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "PATCH",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = cachedContentFromVertex(this.apiClient, apiResponse);
-					return resp;
-				});
-			} else {
-				const body = updateCachedContentParametersToMldev(this.apiClient, params);
-				path = formatMap("{name}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "PATCH",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = cachedContentFromMldev(this.apiClient, apiResponse);
-					return resp;
-				});
-			}
-		}
-		async listInternal(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = listCachedContentsParametersToVertex(this.apiClient, params);
-				path = formatMap("cachedContents", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "GET",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = listCachedContentsResponseFromVertex(this.apiClient, apiResponse);
-					const typedResp = new ListCachedContentsResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			} else {
-				const body = listCachedContentsParametersToMldev(this.apiClient, params);
-				path = formatMap("cachedContents", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "GET",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = listCachedContentsResponseFromMldev(this.apiClient, apiResponse);
-					const typedResp = new ListCachedContentsResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			}
-		}
-	};
-	Chats = class {
-		constructor(modelsModule, apiClient) {
-			this.modelsModule = modelsModule;
-			this.apiClient = apiClient;
-		}
-		/**
-		* Creates a new chat session.
-		*
-		* @remarks
-		* The config in the params will be used for all requests within the chat
-		* session unless overridden by a per-request `config` in
-		* @see {@link types.SendMessageParameters#config}.
-		*
-		* @param params - Parameters for creating a chat session.
-		* @returns A new chat session.
-		*
-		* @example
-		* ```ts
-		* const chat = ai.chats.create({
-		*   model: 'gemini-2.0-flash'
-		*   config: {
-		*     temperature: 0.5,
-		*     maxOutputTokens: 1024,
-		*   }
-		* });
-		* ```
-		*/
-		create(params) {
-			return new Chat(this.apiClient, this.modelsModule, params.model, params.config, params.history);
-		}
-	};
-	Chat = class {
-		constructor(apiClient, modelsModule, model, config = {}, history = []) {
-			this.apiClient = apiClient;
-			this.modelsModule = modelsModule;
-			this.model = model;
-			this.config = config;
-			this.history = history;
-			this.sendPromise = Promise.resolve();
-			validateHistory(history);
-		}
-		/**
-		* Sends a message to the model and returns the response.
-		*
-		* @remarks
-		* This method will wait for the previous message to be processed before
-		* sending the next message.
-		*
-		* @see {@link Chat#sendMessageStream} for streaming method.
-		* @param params - parameters for sending messages within a chat session.
-		* @returns The model's response.
-		*
-		* @example
-		* ```ts
-		* const chat = ai.chats.create({model: 'gemini-2.0-flash'});
-		* const response = await chat.sendMessage({
-		*   message: 'Why is the sky blue?'
-		* });
-		* console.log(response.text);
-		* ```
-		*/
-		async sendMessage(params) {
-			var _a;
-			await this.sendPromise;
-			const inputContent = tContent(this.apiClient, params.message);
-			const responsePromise = this.modelsModule.generateContent({
-				model: this.model,
-				contents: this.getHistory(true).concat(inputContent),
-				config: (_a = params.config) !== null && _a !== void 0 ? _a : this.config
-			});
-			this.sendPromise = (async () => {
-				var _a$1, _b;
-				const response = await responsePromise;
-				const outputContent = (_b = (_a$1 = response.candidates) === null || _a$1 === void 0 ? void 0 : _a$1[0]) === null || _b === void 0 ? void 0 : _b.content;
-				const modelOutput = outputContent ? [outputContent] : [];
-				this.recordHistory(inputContent, modelOutput);
-				return;
-			})();
-			await this.sendPromise;
-			return responsePromise;
-		}
-		/**
-		* Sends a message to the model and returns the response in chunks.
-		*
-		* @remarks
-		* This method will wait for the previous message to be processed before
-		* sending the next message.
-		*
-		* @see {@link Chat#sendMessage} for non-streaming method.
-		* @param params - parameters for sending the message.
-		* @return The model's response.
-		*
-		* @example
-		* ```ts
-		* const chat = ai.chats.create({model: 'gemini-2.0-flash'});
-		* const response = await chat.sendMessageStream({
-		*   message: 'Why is the sky blue?'
-		* });
-		* for await (const chunk of response) {
-		*   console.log(chunk.text);
-		* }
-		* ```
-		*/
-		async sendMessageStream(params) {
-			var _a;
-			await this.sendPromise;
-			const inputContent = tContent(this.apiClient, params.message);
-			const streamResponse = this.modelsModule.generateContentStream({
-				model: this.model,
-				contents: this.getHistory(true).concat(inputContent),
-				config: (_a = params.config) !== null && _a !== void 0 ? _a : this.config
-			});
-			this.sendPromise = streamResponse.then(() => void 0);
-			const response = await streamResponse;
-			const result = this.processStreamResponse(response, inputContent);
-			return result;
-		}
-		/**
-		* Returns the chat history.
-		*
-		* @remarks
-		* The history is a list of contents alternating between user and model.
-		*
-		* There are two types of history:
-		* - The `curated history` contains only the valid turns between user and
-		* model, which will be included in the subsequent requests sent to the model.
-		* - The `comprehensive history` contains all turns, including invalid or
-		*   empty model outputs, providing a complete record of the history.
-		*
-		* The history is updated after receiving the response from the model,
-		* for streaming response, it means receiving the last chunk of the response.
-		*
-		* The `comprehensive history` is returned by default. To get the `curated
-		* history`, set the `curated` parameter to `true`.
-		*
-		* @param curated - whether to return the curated history or the comprehensive
-		*     history.
-		* @return History contents alternating between user and model for the entire
-		*     chat session.
-		*/
-		getHistory(curated = false) {
-			return curated ? extractCuratedHistory(this.history) : this.history;
-		}
-		processStreamResponse(streamResponse, inputContent) {
-			var _a, _b;
-			return __asyncGenerator(this, arguments, function* processStreamResponse_1() {
-				var _c, e_1, _d, _e;
-				const outputContent = [];
-				try {
-					for (var _f = true, streamResponse_1 = __asyncValues(streamResponse), streamResponse_1_1; streamResponse_1_1 = yield __await(streamResponse_1.next()), _c = streamResponse_1_1.done, !_c; _f = true) {
-						_e = streamResponse_1_1.value;
-						_f = false;
-						const chunk = _e;
-						if (isValidResponse(chunk)) {
-							const content = (_b = (_a = chunk.candidates) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.content;
-							if (content !== void 0) outputContent.push(content);
-						}
-						yield yield __await(chunk);
-					}
-				} catch (e_1_1) {
-					e_1 = { error: e_1_1 };
-				} finally {
-					try {
-						if (!_f && !_c && (_d = streamResponse_1.return)) yield __await(_d.call(streamResponse_1));
-					} finally {
-						if (e_1) throw e_1.error;
-					}
-				}
-				this.recordHistory(inputContent, outputContent);
-			});
-		}
-		recordHistory(userInput, modelOutput) {
-			let outputContents = [];
-			if (modelOutput.length > 0 && modelOutput.every((content) => content.role === "model")) outputContents = modelOutput;
-			else outputContents.push({
-				role: "model",
-				parts: []
-			});
-			this.history.push(userInput);
-			this.history.push(...outputContents);
-		}
-	};
-	Files = class extends BaseModule {
-		constructor(apiClient) {
-			super();
-			this.apiClient = apiClient;
-			/**
-			* Lists all current project files from the service.
-			*
-			* @param params - The parameters for the list request
-			* @return The paginated results of the list of files
-			*
-			* @example
-			* The following code prints the names of all files from the service, the
-			* size of each page is 10.
-			*
-			* ```ts
-			* const listResponse = await ai.files.list({config: {'pageSize': 10}});
-			* for await (const file of listResponse) {
-			*   console.log(file.name);
-			* }
-			* ```
-			*/
-			this.list = async (params = {}) => {
-				return new Pager(PagedItem.PAGED_ITEM_FILES, (x) => this.listInternal(x), await this.listInternal(params), params);
-			};
-		}
-		/**
-		* Uploads a file asynchronously to the Gemini API.
-		* This method is not available in Vertex AI.
-		* Supported upload sources:
-		* - Node.js: File path (string) or Blob object.
-		* - Browser: Blob object (e.g., File).
-		*
-		* @remarks
-		* The `mimeType` can be specified in the `config` parameter. If omitted:
-		*  - For file path (string) inputs, the `mimeType` will be inferred from the
-		*     file extension.
-		*  - For Blob object inputs, the `mimeType` will be set to the Blob's `type`
-		*     property.
-		* Somex eamples for file extension to mimeType mapping:
-		* .txt -> text/plain
-		* .json -> application/json
-		* .jpg  -> image/jpeg
-		* .png -> image/png
-		* .mp3 -> audio/mpeg
-		* .mp4 -> video/mp4
-		*
-		* This section can contain multiple paragraphs and code examples.
-		*
-		* @param params - Optional parameters specified in the
-		*        `types.UploadFileParameters` interface.
-		*         @see {@link types.UploadFileParameters#config} for the optional
-		*         config in the parameters.
-		* @return A promise that resolves to a `types.File` object.
-		* @throws An error if called on a Vertex AI client.
-		* @throws An error if the `mimeType` is not provided and can not be inferred,
-		* the `mimeType` can be provided in the `params.config` parameter.
-		* @throws An error occurs if a suitable upload location cannot be established.
-		*
-		* @example
-		* The following code uploads a file to Gemini API.
-		*
-		* ```ts
-		* const file = await ai.files.upload({file: 'file.txt', config: {
-		*   mimeType: 'text/plain',
-		* }});
-		* console.log(file.name);
-		* ```
-		*/
-		async upload(params) {
-			if (this.apiClient.isVertexAI()) throw new Error("Vertex AI does not support uploading files. You can share files through a GCS bucket.");
-			return this.apiClient.uploadFile(params.file, params.config).then((response) => {
-				const file = fileFromMldev(this.apiClient, response);
-				return file;
-			});
-		}
-		async listInternal(params) {
-			var _a;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) throw new Error("This method is only supported by the Gemini Developer API.");
-			else {
-				const body = listFilesParametersToMldev(this.apiClient, params);
-				path = formatMap("files", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "GET",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = listFilesResponseFromMldev(this.apiClient, apiResponse);
-					const typedResp = new ListFilesResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			}
-		}
-		async createInternal(params) {
-			var _a;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) throw new Error("This method is only supported by the Gemini Developer API.");
-			else {
-				const body = createFileParametersToMldev(this.apiClient, params);
-				path = formatMap("upload/v1beta/files", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then(() => {
-					const resp = createFileResponseFromMldev();
-					const typedResp = new CreateFileResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			}
-		}
-		/**
-		* Retrieves the file information from the service.
-		*
-		* @param params - The parameters for the get request
-		* @return The Promise that resolves to the types.File object requested.
-		*
-		* @example
-		* ```ts
-		* const config: GetFileParameters = {
-		*   name: fileName,
-		* };
-		* file = await ai.files.get(config);
-		* console.log(file.name);
-		* ```
-		*/
-		async get(params) {
-			var _a;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) throw new Error("This method is only supported by the Gemini Developer API.");
-			else {
-				const body = getFileParametersToMldev(this.apiClient, params);
-				path = formatMap("files/{file}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "GET",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = fileFromMldev(this.apiClient, apiResponse);
-					return resp;
-				});
-			}
-		}
-		/**
-		* Deletes a remotely stored file.
-		*
-		* @param params - The parameters for the delete request.
-		* @return The DeleteFileResponse, the response for the delete method.
-		*
-		* @example
-		* The following code deletes an example file named "files/mehozpxf877d".
-		*
-		* ```ts
-		* await ai.files.delete({name: file.name});
-		* ```
-		*/
-		async delete(params) {
-			var _a;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) throw new Error("This method is only supported by the Gemini Developer API.");
-			else {
-				const body = deleteFileParametersToMldev(this.apiClient, params);
-				path = formatMap("files/{file}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "DELETE",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then(() => {
-					const resp = deleteFileResponseFromMldev();
-					const typedResp = new DeleteFileResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			}
-		}
-	};
-	FUNCTION_RESPONSE_REQUIRES_ID = "FunctionResponse request must have an `id` field from the response of a ToolCall.FunctionalCalls in Google AI.";
-	Live = class {
-		constructor(apiClient, auth, webSocketFactory) {
-			this.apiClient = apiClient;
-			this.auth = auth;
-			this.webSocketFactory = webSocketFactory;
-		}
-		/**
-		Establishes a connection to the specified model with the given
-		configuration and returns a Session object representing that connection.
-		
-		@experimental
-		
-		@remarks
-		
-		@param params - The parameters for establishing a connection to the model.
-		@return A live session.
-		
-		@example
-		```ts
-		let model: string;
-		if (GOOGLE_GENAI_USE_VERTEXAI) {
-		model = 'gemini-2.0-flash-live-preview-04-09';
-		} else {
-		model = 'gemini-2.0-flash-live-001';
-		}
-		const session = await ai.live.connect({
-		model: model,
-		config: {
-		responseModalities: [Modality.AUDIO],
-		},
-		callbacks: {
-		onopen: () => {
-		console.log('Connected to the socket.');
-		},
-		onmessage: (e: MessageEvent) => {
-		console.log('Received message from the server: %s\n', debug(e.data));
-		},
-		onerror: (e: ErrorEvent) => {
-		console.log('Error occurred: %s\n', debug(e.error));
-		},
-		onclose: (e: CloseEvent) => {
-		console.log('Connection closed.');
-		},
-		},
+var BrowserUploader = class {
+	async upload(file, uploadUrl, apiClient) {
+		if (typeof file === "string") throw new Error("File path is not supported in browser uploader.");
+		return await uploadBlob(file, uploadUrl, apiClient);
+	}
+	async stat(file) {
+		if (typeof file === "string") throw new Error("File path is not supported in browser uploader.");
+		else return await getBlobStat(file);
+	}
+};
+/**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+var BrowserWebSocketFactory = class {
+	create(url, headers, callbacks) {
+		return new BrowserWebSocket(url, headers, callbacks);
+	}
+};
+var BrowserWebSocket = class {
+	constructor(url, headers, callbacks) {
+		this.url = url;
+		this.headers = headers;
+		this.callbacks = callbacks;
+	}
+	connect() {
+		this.ws = new WebSocket(this.url);
+		this.ws.onopen = this.callbacks.onopen;
+		this.ws.onerror = this.callbacks.onerror;
+		this.ws.onclose = this.callbacks.onclose;
+		this.ws.onmessage = this.callbacks.onmessage;
+	}
+	send(message) {
+		if (this.ws === void 0) throw new Error("WebSocket is not connected");
+		this.ws.send(message);
+	}
+	close() {
+		if (this.ws === void 0) throw new Error("WebSocket is not connected");
+		this.ws.close();
+	}
+};
+/**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+const GOOGLE_API_KEY_HEADER = "x-goog-api-key";
+var WebAuth = class {
+	constructor(apiKey) {
+		this.apiKey = apiKey;
+	}
+	async addAuthHeaders(headers) {
+		if (headers.get(GOOGLE_API_KEY_HEADER) !== null) return;
+		headers.append(GOOGLE_API_KEY_HEADER, this.apiKey);
+	}
+};
+/**
+* @license
+* Copyright 2025 Google LLC
+* SPDX-License-Identifier: Apache-2.0
+*/
+const LANGUAGE_LABEL_PREFIX = "gl-node/";
+/**
+* The Google GenAI SDK.
+*
+* @remarks
+* Provides access to the GenAI features through either the {@link
+* https://cloud.google.com/vertex-ai/docs/reference/rest | Gemini API} or
+* the {@link https://cloud.google.com/vertex-ai/docs/reference/rest | Vertex AI
+* API}.
+*
+* The {@link GoogleGenAIOptions.vertexai} value determines which of the API
+* services to use.
+*
+* When using the Gemini API, a {@link GoogleGenAIOptions.apiKey} must also be
+* set. When using Vertex AI, currently only {@link GoogleGenAIOptions.apiKey}
+* is supported via Express mode. {@link GoogleGenAIOptions.project} and {@link
+* GoogleGenAIOptions.location} should not be set.
+*
+* @example
+* Initializing the SDK for using the Gemini API:
+* ```ts
+* import {GoogleGenAI} from '@google/genai';
+* const ai = new GoogleGenAI({apiKey: 'GEMINI_API_KEY'});
+* ```
+*
+* @example
+* Initializing the SDK for using the Vertex AI API:
+* ```ts
+* import {GoogleGenAI} from '@google/genai';
+* const ai = new GoogleGenAI({
+*   vertexai: true,
+*   project: 'PROJECT_ID',
+*   location: 'PROJECT_LOCATION'
+* });
+* ```
+*
+*/
+var GoogleGenAI = class {
+	constructor(options) {
+		var _a;
+		if (options.apiKey == null) throw new Error("An API Key must be set when running in a browser");
+		if (options.project || options.location) throw new Error("Vertex AI project based authentication is not supported on browser runtimes. Please do not provide a project or location.");
+		this.vertexai = (_a = options.vertexai) !== null && _a !== void 0 ? _a : false;
+		this.apiKey = options.apiKey;
+		this.apiVersion = options.apiVersion;
+		const auth = new WebAuth(this.apiKey);
+		this.apiClient = new ApiClient({
+			auth,
+			apiVersion: this.apiVersion,
+			apiKey: this.apiKey,
+			vertexai: this.vertexai,
+			httpOptions: options.httpOptions,
+			userAgentExtra: LANGUAGE_LABEL_PREFIX + "web",
+			uploader: new BrowserUploader()
 		});
-		```
-		*/
-		async connect(params) {
-			var _a, _b, _c, _d;
-			const websocketBaseUrl = this.apiClient.getWebsocketBaseUrl();
-			const apiVersion = this.apiClient.getApiVersion();
-			let url;
-			const headers = mapToHeaders(this.apiClient.getDefaultHeaders());
-			if (this.apiClient.isVertexAI()) {
-				url = `${websocketBaseUrl}/ws/google.cloud.aiplatform.${apiVersion}.LlmBidiService/BidiGenerateContent`;
-				await this.auth.addAuthHeaders(headers);
-			} else {
-				const apiKey = this.apiClient.getApiKey();
-				url = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateContent?key=${apiKey}`;
-			}
-			let onopenResolve = () => {};
-			const onopenPromise = new Promise((resolve) => {
-				onopenResolve = resolve;
-			});
-			const callbacks = params.callbacks;
-			const onopenAwaitedCallback = function() {
-				var _a$1;
-				(_a$1 = callbacks === null || callbacks === void 0 ? void 0 : callbacks.onopen) === null || _a$1 === void 0 || _a$1.call(callbacks);
-				onopenResolve({});
-			};
-			const apiClient = this.apiClient;
-			const websocketCallbacks = {
-				onopen: onopenAwaitedCallback,
-				onmessage: (event) => {
-					handleWebSocketMessage(apiClient, callbacks.onmessage, event);
-				},
-				onerror: (_a = callbacks === null || callbacks === void 0 ? void 0 : callbacks.onerror) !== null && _a !== void 0 ? _a : function(e) {},
-				onclose: (_b = callbacks === null || callbacks === void 0 ? void 0 : callbacks.onclose) !== null && _b !== void 0 ? _b : function(e) {}
-			};
-			const conn = this.webSocketFactory.create(url, headersToMap(headers), websocketCallbacks);
-			conn.connect();
-			await onopenPromise;
-			let transformedModel = tModel(this.apiClient, params.model);
-			if (this.apiClient.isVertexAI() && transformedModel.startsWith("publishers/")) {
-				const project = this.apiClient.getProject();
-				const location = this.apiClient.getLocation();
-				transformedModel = `projects/${project}/locations/${location}/` + transformedModel;
-			}
-			let clientMessage = {};
-			if (this.apiClient.isVertexAI() && ((_c = params.config) === null || _c === void 0 ? void 0 : _c.responseModalities) === void 0) if (params.config === void 0) params.config = { responseModalities: [Modality.AUDIO] };
-			else params.config.responseModalities = [Modality.AUDIO];
-			if ((_d = params.config) === null || _d === void 0 ? void 0 : _d.generationConfig) console.warn("Setting `LiveConnectConfig.generation_config` is deprecated, please set the fields on `LiveConnectConfig` directly. This will become an error in a future version (not before Q3 2025).");
-			const liveConnectParameters = {
-				model: transformedModel,
-				config: params.config,
-				callbacks: params.callbacks
-			};
-			if (this.apiClient.isVertexAI()) clientMessage = liveConnectParametersToVertex(this.apiClient, liveConnectParameters);
-			else clientMessage = liveConnectParametersToMldev(this.apiClient, liveConnectParameters);
-			delete clientMessage["config"];
-			conn.send(JSON.stringify(clientMessage));
-			return new Session(conn, this.apiClient);
-		}
-	};
-	defaultLiveSendClientContentParamerters = { turnComplete: true };
-	Session = class {
-		constructor(conn, apiClient) {
-			this.conn = conn;
-			this.apiClient = apiClient;
-		}
-		tLiveClientContent(apiClient, params) {
-			if (params.turns !== null && params.turns !== void 0) {
-				let contents = [];
-				try {
-					contents = tContents(apiClient, params.turns);
-					if (apiClient.isVertexAI()) contents = contents.map((item) => contentToVertex(apiClient, item));
-					else contents = contents.map((item) => contentToMldev(apiClient, item));
-				} catch (_a) {
-					throw new Error(`Failed to parse client content "turns", type: '${typeof params.turns}'`);
-				}
-				return { clientContent: {
-					turns: contents,
-					turnComplete: params.turnComplete
-				} };
-			}
-			return { clientContent: { turnComplete: params.turnComplete } };
-		}
-		tLiveClientRealtimeInput(apiClient, params) {
-			let clientMessage = {};
-			if (!("media" in params) || !params.media) throw new Error(`Failed to convert realtime input "media", type: '${typeof params.media}'`);
-			clientMessage = { realtimeInput: {
-				mediaChunks: [params.media],
-				activityStart: params.activityStart,
-				activityEnd: params.activityEnd
-			} };
-			return clientMessage;
-		}
-		tLiveClienttToolResponse(apiClient, params) {
-			let functionResponses = [];
-			if (params.functionResponses == null) throw new Error("functionResponses is required.");
-			if (!Array.isArray(params.functionResponses)) functionResponses = [params.functionResponses];
-			else functionResponses = params.functionResponses;
-			if (functionResponses.length === 0) throw new Error("functionResponses is required.");
-			for (const functionResponse of functionResponses) {
-				if (typeof functionResponse !== "object" || functionResponse === null || !("name" in functionResponse) || !("response" in functionResponse)) throw new Error(`Could not parse function response, type '${typeof functionResponse}'.`);
-				if (!apiClient.isVertexAI() && !("id" in functionResponse)) throw new Error(FUNCTION_RESPONSE_REQUIRES_ID);
-			}
-			const clientMessage = { toolResponse: { functionResponses } };
-			return clientMessage;
-		}
-		/**
-		Send a message over the established connection.
-		
-		@param params - Contains two **optional** properties, `turns` and
-		`turnComplete`.
-		
-		- `turns` will be converted to a `Content[]`
-		- `turnComplete: true` [default] indicates that you are done sending
-		content and expect a response. If `turnComplete: false`, the server
-		will wait for additional messages before starting generation.
-		
-		@experimental
-		
-		@remarks
-		There are two ways to send messages to the live API:
-		`sendClientContent` and `sendRealtimeInput`.
-		
-		`sendClientContent` messages are added to the model context **in order**.
-		Having a conversation using `sendClientContent` messages is roughly
-		equivalent to using the `Chat.sendMessageStream`, except that the state of
-		the `chat` history is stored on the API server instead of locally.
-		
-		Because of `sendClientContent`'s order guarantee, the model cannot respons
-		as quickly to `sendClientContent` messages as to `sendRealtimeInput`
-		messages. This makes the biggest difference when sending objects that have
-		significant preprocessing time (typically images).
-		
-		The `sendClientContent` message sends a `Content[]`
-		which has more options than the `Blob` sent by `sendRealtimeInput`.
-		
-		So the main use-cases for `sendClientContent` over `sendRealtimeInput` are:
-		
-		- Sending anything that can't be represented as a `Blob` (text,
-		`sendClientContent({turns="Hello?"}`)).
-		- Managing turns when not using audio input and voice activity detection.
-		(`sendClientContent({turnComplete:true})` or the short form
-		`sendClientContent()`)
-		- Prefilling a conversation context
-		```
-		sendClientContent({
-		turns: [
-		Content({role:user, parts:...}),
-		Content({role:user, parts:...}),
-		...
-		]
-		})
-		```
-		@experimental
-		*/
-		sendClientContent(params) {
-			params = Object.assign(Object.assign({}, defaultLiveSendClientContentParamerters), params);
-			const clientMessage = this.tLiveClientContent(this.apiClient, params);
-			this.conn.send(JSON.stringify(clientMessage));
-		}
-		/**
-		Send a realtime message over the established connection.
-		
-		@param params - Contains one property, `media`.
-		
-		- `media` will be converted to a `Blob`
-		
-		@experimental
-		
-		@remarks
-		Use `sendRealtimeInput` for realtime audio chunks and video frames (images).
-		
-		With `sendRealtimeInput` the api will respond to audio automatically
-		based on voice activity detection (VAD).
-		
-		`sendRealtimeInput` is optimized for responsivness at the expense of
-		deterministic ordering guarantees. Audio and video tokens are to the
-		context when they become available.
-		
-		Note: The Call signature expects a `Blob` object, but only a subset
-		of audio and image mimetypes are allowed.
-		*/
-		sendRealtimeInput(params) {
-			if (params.media == null) throw new Error("Media is required.");
-			const clientMessage = this.tLiveClientRealtimeInput(this.apiClient, params);
-			this.conn.send(JSON.stringify(clientMessage));
-		}
-		/**
-		Send a function response message over the established connection.
-		
-		@param params - Contains property `functionResponses`.
-		
-		- `functionResponses` will be converted to a `functionResponses[]`
-		
-		@remarks
-		Use `sendFunctionResponse` to reply to `LiveServerToolCall` from the server.
-		
-		Use {@link types.LiveConnectConfig#tools} to configure the callable functions.
-		
-		@experimental
-		*/
-		sendToolResponse(params) {
-			if (params.functionResponses == null) throw new Error("Tool response parameters are required.");
-			const clientMessage = this.tLiveClienttToolResponse(this.apiClient, params);
-			this.conn.send(JSON.stringify(clientMessage));
-		}
-		/**
-		Terminates the WebSocket connection.
-		
-		@experimental
-		
-		@example
-		```ts
-		let model: string;
-		if (GOOGLE_GENAI_USE_VERTEXAI) {
-		model = 'gemini-2.0-flash-live-preview-04-09';
-		} else {
-		model = 'gemini-2.0-flash-live-001';
-		}
-		const session = await ai.live.connect({
-		model: model,
-		config: {
-		responseModalities: [Modality.AUDIO],
-		}
-		});
-		
-		session.close();
-		```
-		*/
-		close() {
-			this.conn.close();
-		}
-	};
-	Models = class extends BaseModule {
-		constructor(apiClient) {
-			super();
-			this.apiClient = apiClient;
-			/**
-			* Makes an API request to generate content with a given model.
-			*
-			* For the `model` parameter, supported formats for Vertex AI API include:
-			* - The Gemini model ID, for example: 'gemini-2.0-flash'
-			* - The full resource name starts with 'projects/', for example:
-			*  'projects/my-project-id/locations/us-central1/publishers/google/models/gemini-2.0-flash'
-			* - The partial resource name with 'publishers/', for example:
-			*  'publishers/google/models/gemini-2.0-flash' or
-			*  'publishers/meta/models/llama-3.1-405b-instruct-maas'
-			* - `/` separated publisher and model name, for example:
-			* 'google/gemini-2.0-flash' or 'meta/llama-3.1-405b-instruct-maas'
-			*
-			* For the `model` parameter, supported formats for Gemini API include:
-			* - The Gemini model ID, for example: 'gemini-2.0-flash'
-			* - The model name starts with 'models/', for example:
-			*  'models/gemini-2.0-flash'
-			* - For tuned models, the model name starts with 'tunedModels/',
-			* for example:
-			* 'tunedModels/1234567890123456789'
-			*
-			* Some models support multimodal input and output.
-			*
-			* @param params - The parameters for generating content.
-			* @return The response from generating content.
-			*
-			* @example
-			* ```ts
-			* const response = await ai.models.generateContent({
-			*   model: 'gemini-2.0-flash',
-			*   contents: 'why is the sky blue?',
-			*   config: {
-			*     candidateCount: 2,
-			*   }
-			* });
-			* console.log(response);
-			* ```
-			*/
-			this.generateContent = async (params) => {
-				return await this.generateContentInternal(params);
-			};
-			/**
-			* Makes an API request to generate content with a given model and yields the
-			* response in chunks.
-			*
-			* For the `model` parameter, supported formats for Vertex AI API include:
-			* - The Gemini model ID, for example: 'gemini-2.0-flash'
-			* - The full resource name starts with 'projects/', for example:
-			*  'projects/my-project-id/locations/us-central1/publishers/google/models/gemini-2.0-flash'
-			* - The partial resource name with 'publishers/', for example:
-			*  'publishers/google/models/gemini-2.0-flash' or
-			*  'publishers/meta/models/llama-3.1-405b-instruct-maas'
-			* - `/` separated publisher and model name, for example:
-			* 'google/gemini-2.0-flash' or 'meta/llama-3.1-405b-instruct-maas'
-			*
-			* For the `model` parameter, supported formats for Gemini API include:
-			* - The Gemini model ID, for example: 'gemini-2.0-flash'
-			* - The model name starts with 'models/', for example:
-			*  'models/gemini-2.0-flash'
-			* - For tuned models, the model name starts with 'tunedModels/',
-			* for example:
-			*  'tunedModels/1234567890123456789'
-			*
-			* Some models support multimodal input and output.
-			*
-			* @param params - The parameters for generating content with streaming response.
-			* @return The response from generating content.
-			*
-			* @example
-			* ```ts
-			* const response = await ai.models.generateContentStream({
-			*   model: 'gemini-2.0-flash',
-			*   contents: 'why is the sky blue?',
-			*   config: {
-			*     maxOutputTokens: 200,
-			*   }
-			* });
-			* for await (const chunk of response) {
-			*   console.log(chunk);
-			* }
-			* ```
-			*/
-			this.generateContentStream = async (params) => {
-				return await this.generateContentStreamInternal(params);
-			};
-			/**
-			* Generates an image based on a text description and configuration.
-			*
-			* @param model - The model to use.
-			* @param prompt - A text description of the image to generate.
-			* @param [config] - The config for image generation.
-			* @return The response from the API.
-			*
-			* @example
-			* ```ts
-			* const response = await client.models.generateImages({
-			*  model: 'imagen-3.0-generate-002',
-			*  prompt: 'Robot holding a red skateboard',
-			*  config: {
-			*    numberOfImages: 1,
-			*    includeRaiReason: true,
-			*  },
-			* });
-			* console.log(response?.generatedImages?.[0]?.image?.imageBytes);
-			* ```
-			*/
-			this.generateImages = async (params) => {
-				return await this.generateImagesInternal(params).then((apiResponse) => {
-					var _a;
-					let positivePromptSafetyAttributes;
-					const generatedImages = [];
-					if (apiResponse === null || apiResponse === void 0 ? void 0 : apiResponse.generatedImages) for (const generatedImage of apiResponse.generatedImages) if (generatedImage && (generatedImage === null || generatedImage === void 0 ? void 0 : generatedImage.safetyAttributes) && ((_a = generatedImage === null || generatedImage === void 0 ? void 0 : generatedImage.safetyAttributes) === null || _a === void 0 ? void 0 : _a.contentType) === "Positive Prompt") positivePromptSafetyAttributes = generatedImage === null || generatedImage === void 0 ? void 0 : generatedImage.safetyAttributes;
-					else generatedImages.push(generatedImage);
-					let response;
-					if (positivePromptSafetyAttributes) response = {
-						generatedImages,
-						positivePromptSafetyAttributes
-					};
-					else response = { generatedImages };
-					return response;
-				});
-			};
-		}
-		async generateContentInternal(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = generateContentParametersToVertex(this.apiClient, params);
-				path = formatMap("{model}:generateContent", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = generateContentResponseFromVertex(this.apiClient, apiResponse);
-					const typedResp = new GenerateContentResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			} else {
-				const body = generateContentParametersToMldev(this.apiClient, params);
-				path = formatMap("{model}:generateContent", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = generateContentResponseFromMldev(this.apiClient, apiResponse);
-					const typedResp = new GenerateContentResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			}
-		}
-		async generateContentStreamInternal(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = generateContentParametersToVertex(this.apiClient, params);
-				path = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				const apiClient = this.apiClient;
-				response = apiClient.requestStream({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				});
-				return response.then(function(apiResponse) {
-					return __asyncGenerator(this, arguments, function* () {
-						var _a$1, e_1, _b$1, _c;
-						try {
-							for (var _d = true, apiResponse_1 = __asyncValues(apiResponse), apiResponse_1_1; apiResponse_1_1 = yield __await(apiResponse_1.next()), _a$1 = apiResponse_1_1.done, !_a$1; _d = true) {
-								_c = apiResponse_1_1.value;
-								_d = false;
-								const chunk = _c;
-								const resp = generateContentResponseFromVertex(apiClient, yield __await(chunk.json()));
-								const typedResp = new GenerateContentResponse();
-								Object.assign(typedResp, resp);
-								yield yield __await(typedResp);
-							}
-						} catch (e_1_1) {
-							e_1 = { error: e_1_1 };
-						} finally {
-							try {
-								if (!_d && !_a$1 && (_b$1 = apiResponse_1.return)) yield __await(_b$1.call(apiResponse_1));
-							} finally {
-								if (e_1) throw e_1.error;
-							}
-						}
-					});
-				});
-			} else {
-				const body = generateContentParametersToMldev(this.apiClient, params);
-				path = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				const apiClient = this.apiClient;
-				response = apiClient.requestStream({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				});
-				return response.then(function(apiResponse) {
-					return __asyncGenerator(this, arguments, function* () {
-						var _a$1, e_2, _b$1, _c;
-						try {
-							for (var _d = true, apiResponse_2 = __asyncValues(apiResponse), apiResponse_2_1; apiResponse_2_1 = yield __await(apiResponse_2.next()), _a$1 = apiResponse_2_1.done, !_a$1; _d = true) {
-								_c = apiResponse_2_1.value;
-								_d = false;
-								const chunk = _c;
-								const resp = generateContentResponseFromMldev(apiClient, yield __await(chunk.json()));
-								const typedResp = new GenerateContentResponse();
-								Object.assign(typedResp, resp);
-								yield yield __await(typedResp);
-							}
-						} catch (e_2_1) {
-							e_2 = { error: e_2_1 };
-						} finally {
-							try {
-								if (!_d && !_a$1 && (_b$1 = apiResponse_2.return)) yield __await(_b$1.call(apiResponse_2));
-							} finally {
-								if (e_2) throw e_2.error;
-							}
-						}
-					});
-				});
-			}
-		}
-		/**
-		* Calculates embeddings for the given contents. Only text is supported.
-		*
-		* @param params - The parameters for embedding contents.
-		* @return The response from the API.
-		*
-		* @example
-		* ```ts
-		* const response = await ai.models.embedContent({
-		*  model: 'text-embedding-004',
-		*  contents: [
-		*    'What is your name?',
-		*    'What is your favorite color?',
-		*  ],
-		*  config: {
-		*    outputDimensionality: 64,
-		*  },
-		* });
-		* console.log(response);
-		* ```
-		*/
-		async embedContent(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = embedContentParametersToVertex(this.apiClient, params);
-				path = formatMap("{model}:predict", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = embedContentResponseFromVertex(this.apiClient, apiResponse);
-					const typedResp = new EmbedContentResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			} else {
-				const body = embedContentParametersToMldev(this.apiClient, params);
-				path = formatMap("{model}:batchEmbedContents", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = embedContentResponseFromMldev(this.apiClient, apiResponse);
-					const typedResp = new EmbedContentResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			}
-		}
-		/**
-		* Generates an image based on a text description and configuration.
-		*
-		* @param params - The parameters for generating images.
-		* @return The response from the API.
-		*
-		* @example
-		* ```ts
-		* const response = await ai.models.generateImages({
-		*  model: 'imagen-3.0-generate-002',
-		*  prompt: 'Robot holding a red skateboard',
-		*  config: {
-		*    numberOfImages: 1,
-		*    includeRaiReason: true,
-		*  },
-		* });
-		* console.log(response?.generatedImages?.[0]?.image?.imageBytes);
-		* ```
-		*/
-		async generateImagesInternal(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = generateImagesParametersToVertex(this.apiClient, params);
-				path = formatMap("{model}:predict", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = generateImagesResponseFromVertex(this.apiClient, apiResponse);
-					const typedResp = new GenerateImagesResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			} else {
-				const body = generateImagesParametersToMldev(this.apiClient, params);
-				path = formatMap("{model}:predict", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = generateImagesResponseFromMldev(this.apiClient, apiResponse);
-					const typedResp = new GenerateImagesResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			}
-		}
-		/**
-		* Fetches information about a model by name.
-		*
-		* @example
-		* ```ts
-		* const modelInfo = await ai.models.get({model: 'gemini-2.0-flash'});
-		* ```
-		*/
-		async get(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = getModelParametersToVertex(this.apiClient, params);
-				path = formatMap("{name}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "GET",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = modelFromVertex(this.apiClient, apiResponse);
-					return resp;
-				});
-			} else {
-				const body = getModelParametersToMldev(this.apiClient, params);
-				path = formatMap("{name}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "GET",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = modelFromMldev(this.apiClient, apiResponse);
-					return resp;
-				});
-			}
-		}
-		/**
-		* Counts the number of tokens in the given contents. Multimodal input is
-		* supported for Gemini models.
-		*
-		* @param params - The parameters for counting tokens.
-		* @return The response from the API.
-		*
-		* @example
-		* ```ts
-		* const response = await ai.models.countTokens({
-		*  model: 'gemini-2.0-flash',
-		*  contents: 'The quick brown fox jumps over the lazy dog.'
-		* });
-		* console.log(response);
-		* ```
-		*/
-		async countTokens(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = countTokensParametersToVertex(this.apiClient, params);
-				path = formatMap("{model}:countTokens", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = countTokensResponseFromVertex(this.apiClient, apiResponse);
-					const typedResp = new CountTokensResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			} else {
-				const body = countTokensParametersToMldev(this.apiClient, params);
-				path = formatMap("{model}:countTokens", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = countTokensResponseFromMldev(this.apiClient, apiResponse);
-					const typedResp = new CountTokensResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			}
-		}
-		/**
-		* Given a list of contents, returns a corresponding TokensInfo containing
-		* the list of tokens and list of token ids.
-		*
-		* This method is not supported by the Gemini Developer API.
-		*
-		* @param params - The parameters for computing tokens.
-		* @return The response from the API.
-		*
-		* @example
-		* ```ts
-		* const response = await ai.models.computeTokens({
-		*  model: 'gemini-2.0-flash',
-		*  contents: 'What is your name?'
-		* });
-		* console.log(response);
-		* ```
-		*/
-		async computeTokens(params) {
-			var _a;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = computeTokensParametersToVertex(this.apiClient, params);
-				path = formatMap("{model}:computeTokens", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = computeTokensResponseFromVertex(this.apiClient, apiResponse);
-					const typedResp = new ComputeTokensResponse();
-					Object.assign(typedResp, resp);
-					return typedResp;
-				});
-			} else throw new Error("This method is only supported by the Vertex AI.");
-		}
-		/**
-		*  Generates videos based on a text description and configuration.
-		*
-		* @param params - The parameters for generating videos.
-		* @return A Promise<GenerateVideosOperation> which allows you to track the progress and eventually retrieve the generated videos using the operations.get method.
-		*
-		* @example
-		* ```ts
-		* const operation = await ai.models.generateVideos({
-		*  model: 'veo-2.0-generate-001',
-		*  prompt: 'A neon hologram of a cat driving at top speed',
-		*  config: {
-		*    numberOfVideos: 1
-		* });
-		*
-		* while (!operation.done) {
-		*   await new Promise(resolve => setTimeout(resolve, 10000));
-		*   operation = await ai.operations.getVideosOperation({operation: operation});
-		* }
-		*
-		* console.log(operation.response?.generatedVideos?.[0]?.video?.uri);
-		* ```
-		*/
-		async generateVideos(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = generateVideosParametersToVertex(this.apiClient, params);
-				path = formatMap("{model}:predictLongRunning", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = generateVideosOperationFromVertex$1(this.apiClient, apiResponse);
-					return resp;
-				});
-			} else {
-				const body = generateVideosParametersToMldev(this.apiClient, params);
-				path = formatMap("{model}:predictLongRunning", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = generateVideosOperationFromMldev$1(this.apiClient, apiResponse);
-					return resp;
-				});
-			}
-		}
-	};
-	Operations = class extends BaseModule {
-		constructor(apiClient) {
-			super();
-			this.apiClient = apiClient;
-		}
-		/**
-		* Gets the status of a long-running operation.
-		*
-		* @param parameters The parameters for the get operation request.
-		* @return The updated Operation object, with the latest status or result.
-		*/
-		async getVideosOperation(parameters) {
-			const operation = parameters.operation;
-			const config = parameters.config;
-			if (operation.name === void 0 || operation.name === "") throw new Error("Operation name is required.");
-			if (this.apiClient.isVertexAI()) {
-				const resourceName$1 = operation.name.split("/operations/")[0];
-				let httpOptions = void 0;
-				if (config && "httpOptions" in config) httpOptions = config.httpOptions;
-				return this.fetchPredictVideosOperationInternal({
-					operationName: operation.name,
-					resourceName: resourceName$1,
-					config: { httpOptions }
-				});
-			} else return this.getVideosOperationInternal({
-				operationName: operation.name,
-				config
-			});
-		}
-		async getVideosOperationInternal(params) {
-			var _a, _b;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = getOperationParametersToVertex(this.apiClient, params);
-				path = formatMap("{operationName}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "GET",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = generateVideosOperationFromVertex(this.apiClient, apiResponse);
-					return resp;
-				});
-			} else {
-				const body = getOperationParametersToMldev(this.apiClient, params);
-				path = formatMap("{operationName}", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "GET",
-					httpOptions: (_b = params.config) === null || _b === void 0 ? void 0 : _b.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = generateVideosOperationFromMldev(this.apiClient, apiResponse);
-					return resp;
-				});
-			}
-		}
-		async fetchPredictVideosOperationInternal(params) {
-			var _a;
-			let response;
-			let path = "";
-			let queryParams = {};
-			if (this.apiClient.isVertexAI()) {
-				const body = fetchPredictOperationParametersToVertex(this.apiClient, params);
-				path = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
-				queryParams = body["_query"];
-				delete body["config"];
-				delete body["_url"];
-				delete body["_query"];
-				response = this.apiClient.request({
-					path,
-					queryParams,
-					body: JSON.stringify(body),
-					httpMethod: "POST",
-					httpOptions: (_a = params.config) === null || _a === void 0 ? void 0 : _a.httpOptions
-				}).then((httpResponse) => {
-					return httpResponse.json();
-				});
-				return response.then((apiResponse) => {
-					const resp = generateVideosOperationFromVertex(this.apiClient, apiResponse);
-					return resp;
-				});
-			} else throw new Error("This method is only supported by the Vertex AI.");
-		}
-	};
-	CONTENT_TYPE_HEADER = "Content-Type";
-	SERVER_TIMEOUT_HEADER = "X-Server-Timeout";
-	USER_AGENT_HEADER = "User-Agent";
-	GOOGLE_API_CLIENT_HEADER = "x-goog-api-client";
-	SDK_VERSION = "0.9.0";
-	LIBRARY_LABEL = `google-genai-sdk/${SDK_VERSION}`;
-	VERTEX_AI_API_DEFAULT_VERSION = "v1beta1";
-	GOOGLE_AI_API_DEFAULT_VERSION = "v1beta";
-	responseLineRE = /^data: (.*)(?:\n\n|\r\r|\r\n\r\n)/;
-	ClientError = class extends Error {
-		constructor(message, stackTrace) {
-			if (stackTrace) super(message, { cause: stackTrace });
-			else super(message, { cause: new Error().stack });
-			this.message = message;
-			this.name = "ClientError";
-		}
-	};
-	ServerError = class extends Error {
-		constructor(message, stackTrace) {
-			if (stackTrace) super(message, { cause: stackTrace });
-			else super(message, { cause: new Error().stack });
-			this.message = message;
-			this.name = "ServerError";
-		}
-	};
-	ApiClient = class {
-		constructor(opts) {
-			var _a, _b;
-			this.clientOptions = Object.assign(Object.assign({}, opts), {
-				project: opts.project,
-				location: opts.location,
-				apiKey: opts.apiKey,
-				vertexai: opts.vertexai
-			});
-			const initHttpOptions = {};
-			if (this.clientOptions.vertexai) {
-				initHttpOptions.apiVersion = (_a = this.clientOptions.apiVersion) !== null && _a !== void 0 ? _a : VERTEX_AI_API_DEFAULT_VERSION;
-				if (this.getProject() || this.getLocation()) {
-					initHttpOptions.baseUrl = `https://${this.clientOptions.location}-aiplatform.googleapis.com/`;
-					this.clientOptions.apiKey = void 0;
-				} else {
-					initHttpOptions.baseUrl = `https://aiplatform.googleapis.com/`;
-					this.clientOptions.project = void 0;
-					this.clientOptions.location = void 0;
-				}
-			} else {
-				initHttpOptions.apiVersion = (_b = this.clientOptions.apiVersion) !== null && _b !== void 0 ? _b : GOOGLE_AI_API_DEFAULT_VERSION;
-				initHttpOptions.baseUrl = `https://generativelanguage.googleapis.com/`;
-			}
-			initHttpOptions.headers = this.getDefaultHeaders();
-			this.clientOptions.httpOptions = initHttpOptions;
-			if (opts.httpOptions) this.clientOptions.httpOptions = this.patchHttpOptions(initHttpOptions, opts.httpOptions);
-		}
-		isVertexAI() {
-			var _a;
-			return (_a = this.clientOptions.vertexai) !== null && _a !== void 0 ? _a : false;
-		}
-		getProject() {
-			return this.clientOptions.project;
-		}
-		getLocation() {
-			return this.clientOptions.location;
-		}
-		getApiVersion() {
-			if (this.clientOptions.httpOptions && this.clientOptions.httpOptions.apiVersion !== void 0) return this.clientOptions.httpOptions.apiVersion;
-			throw new Error("API version is not set.");
-		}
-		getBaseUrl() {
-			if (this.clientOptions.httpOptions && this.clientOptions.httpOptions.baseUrl !== void 0) return this.clientOptions.httpOptions.baseUrl;
-			throw new Error("Base URL is not set.");
-		}
-		getRequestUrl() {
-			return this.getRequestUrlInternal(this.clientOptions.httpOptions);
-		}
-		getHeaders() {
-			if (this.clientOptions.httpOptions && this.clientOptions.httpOptions.headers !== void 0) return this.clientOptions.httpOptions.headers;
-			else throw new Error("Headers are not set.");
-		}
-		getRequestUrlInternal(httpOptions) {
-			if (!httpOptions || httpOptions.baseUrl === void 0 || httpOptions.apiVersion === void 0) throw new Error("HTTP options are not correctly set.");
-			const baseUrl = httpOptions.baseUrl.endsWith("/") ? httpOptions.baseUrl.slice(0, -1) : httpOptions.baseUrl;
-			const urlElement = [baseUrl];
-			if (httpOptions.apiVersion && httpOptions.apiVersion !== "") urlElement.push(httpOptions.apiVersion);
-			return urlElement.join("/");
-		}
-		getBaseResourcePath() {
-			return `projects/${this.clientOptions.project}/locations/${this.clientOptions.location}`;
-		}
-		getApiKey() {
-			return this.clientOptions.apiKey;
-		}
-		getWebsocketBaseUrl() {
-			const baseUrl = this.getBaseUrl();
-			const urlParts = new URL(baseUrl);
-			urlParts.protocol = "wss";
-			return urlParts.toString();
-		}
-		setBaseUrl(url) {
-			if (this.clientOptions.httpOptions) this.clientOptions.httpOptions.baseUrl = url;
-			else throw new Error("HTTP options are not correctly set.");
-		}
-		constructUrl(path, httpOptions, prependProjectLocation) {
-			const urlElement = [this.getRequestUrlInternal(httpOptions)];
-			if (prependProjectLocation) urlElement.push(this.getBaseResourcePath());
-			if (path !== "") urlElement.push(path);
-			const url = new URL(`${urlElement.join("/")}`);
-			return url;
-		}
-		shouldPrependVertexProjectPath(request) {
-			if (this.clientOptions.apiKey) return false;
-			if (!this.clientOptions.vertexai) return false;
-			if (request.path.startsWith("projects/")) return false;
-			if (request.httpMethod === "GET" && request.path.startsWith("publishers/google/models")) return false;
-			return true;
-		}
-		async request(request) {
-			let patchedHttpOptions = this.clientOptions.httpOptions;
-			if (request.httpOptions) patchedHttpOptions = this.patchHttpOptions(this.clientOptions.httpOptions, request.httpOptions);
-			const prependProjectLocation = this.shouldPrependVertexProjectPath(request);
-			const url = this.constructUrl(request.path, patchedHttpOptions, prependProjectLocation);
-			if (request.queryParams) for (const [key, value] of Object.entries(request.queryParams)) url.searchParams.append(key, String(value));
-			let requestInit = {};
-			if (request.httpMethod === "GET") {
-				if (request.body && request.body !== "{}") throw new Error("Request body should be empty for GET request, but got non empty request body");
-			} else requestInit.body = request.body;
-			requestInit = await this.includeExtraHttpOptionsToRequestInit(requestInit, patchedHttpOptions);
-			return this.unaryApiCall(url, requestInit, request.httpMethod);
-		}
-		patchHttpOptions(baseHttpOptions, requestHttpOptions) {
-			const patchedHttpOptions = JSON.parse(JSON.stringify(baseHttpOptions));
-			for (const [key, value] of Object.entries(requestHttpOptions)) if (typeof value === "object") patchedHttpOptions[key] = Object.assign(Object.assign({}, patchedHttpOptions[key]), value);
-			else if (value !== void 0) patchedHttpOptions[key] = value;
-			return patchedHttpOptions;
-		}
-		async requestStream(request) {
-			let patchedHttpOptions = this.clientOptions.httpOptions;
-			if (request.httpOptions) patchedHttpOptions = this.patchHttpOptions(this.clientOptions.httpOptions, request.httpOptions);
-			const prependProjectLocation = this.shouldPrependVertexProjectPath(request);
-			const url = this.constructUrl(request.path, patchedHttpOptions, prependProjectLocation);
-			if (!url.searchParams.has("alt") || url.searchParams.get("alt") !== "sse") url.searchParams.set("alt", "sse");
-			let requestInit = {};
-			requestInit.body = request.body;
-			requestInit = await this.includeExtraHttpOptionsToRequestInit(requestInit, patchedHttpOptions);
-			return this.streamApiCall(url, requestInit, request.httpMethod);
-		}
-		async includeExtraHttpOptionsToRequestInit(requestInit, httpOptions) {
-			if (httpOptions && httpOptions.timeout && httpOptions.timeout > 0) {
-				const abortController = new AbortController();
-				const signal = abortController.signal;
-				setTimeout(() => abortController.abort(), httpOptions.timeout);
-				requestInit.signal = signal;
-			}
-			requestInit.headers = await this.getHeadersInternal(httpOptions);
-			return requestInit;
-		}
-		async unaryApiCall(url, requestInit, httpMethod) {
-			return this.apiCall(url.toString(), Object.assign(Object.assign({}, requestInit), { method: httpMethod })).then(async (response) => {
-				await throwErrorIfNotOK(response);
-				return new HttpResponse(response);
-			}).catch((e) => {
-				if (e instanceof Error) throw e;
-				else throw new Error(JSON.stringify(e));
-			});
-		}
-		async streamApiCall(url, requestInit, httpMethod) {
-			return this.apiCall(url.toString(), Object.assign(Object.assign({}, requestInit), { method: httpMethod })).then(async (response) => {
-				await throwErrorIfNotOK(response);
-				return this.processStreamResponse(response);
-			}).catch((e) => {
-				if (e instanceof Error) throw e;
-				else throw new Error(JSON.stringify(e));
-			});
-		}
-		processStreamResponse(response) {
-			var _a;
-			return __asyncGenerator(this, arguments, function* processStreamResponse_1() {
-				const reader = (_a = response === null || response === void 0 ? void 0 : response.body) === null || _a === void 0 ? void 0 : _a.getReader();
-				const decoder = new TextDecoder("utf-8");
-				if (!reader) throw new Error("Response body is empty");
-				try {
-					let buffer = "";
-					while (true) {
-						const { done, value } = yield __await(reader.read());
-						if (done) {
-							if (buffer.trim().length > 0) throw new Error("Incomplete JSON segment at the end");
-							break;
-						}
-						const chunkString = decoder.decode(value);
-						buffer += chunkString;
-						let match = buffer.match(responseLineRE);
-						while (match) {
-							const processedChunkString = match[1];
-							try {
-								const partialResponse = new Response(processedChunkString, {
-									headers: response === null || response === void 0 ? void 0 : response.headers,
-									status: response === null || response === void 0 ? void 0 : response.status,
-									statusText: response === null || response === void 0 ? void 0 : response.statusText
-								});
-								yield yield __await(new HttpResponse(partialResponse));
-								buffer = buffer.slice(match[0].length);
-								match = buffer.match(responseLineRE);
-							} catch (e) {
-								throw new Error(`exception parsing stream chunk ${processedChunkString}. ${e}`);
-							}
-						}
-					}
-				} finally {
-					reader.releaseLock();
-				}
-			});
-		}
-		async apiCall(url, requestInit) {
-			return fetch(url, requestInit).catch((e) => {
-				throw new Error(`exception ${e} sending request`);
-			});
-		}
-		getDefaultHeaders() {
-			const headers = {};
-			const versionHeaderValue = LIBRARY_LABEL + " " + this.clientOptions.userAgentExtra;
-			headers[USER_AGENT_HEADER] = versionHeaderValue;
-			headers[GOOGLE_API_CLIENT_HEADER] = versionHeaderValue;
-			headers[CONTENT_TYPE_HEADER] = "application/json";
-			return headers;
-		}
-		async getHeadersInternal(httpOptions) {
-			const headers = new Headers();
-			if (httpOptions && httpOptions.headers) {
-				for (const [key, value] of Object.entries(httpOptions.headers)) headers.append(key, value);
-				if (httpOptions.timeout && httpOptions.timeout > 0) headers.append(SERVER_TIMEOUT_HEADER, String(Math.ceil(httpOptions.timeout / 1e3)));
-			}
-			await this.clientOptions.auth.addAuthHeaders(headers);
-			return headers;
-		}
-		/**
-		* Uploads a file asynchronously using Gemini API only, this is not supported
-		* in Vertex AI.
-		*
-		* @param file The string path to the file to be uploaded or a Blob object.
-		* @param config Optional parameters specified in the `UploadFileConfig`
-		*     interface. @see {@link UploadFileConfig}
-		* @return A promise that resolves to a `File` object.
-		* @throws An error if called on a Vertex AI client.
-		* @throws An error if the `mimeType` is not provided and can not be inferred,
-		*/
-		async uploadFile(file, config) {
-			var _a;
-			const fileToUpload = {};
-			if (config != null) {
-				fileToUpload.mimeType = config.mimeType;
-				fileToUpload.name = config.name;
-				fileToUpload.displayName = config.displayName;
-			}
-			if (fileToUpload.name && !fileToUpload.name.startsWith("files/")) fileToUpload.name = `files/${fileToUpload.name}`;
-			const uploader = this.clientOptions.uploader;
-			const fileStat = await uploader.stat(file);
-			fileToUpload.sizeBytes = String(fileStat.size);
-			const mimeType = (_a = config === null || config === void 0 ? void 0 : config.mimeType) !== null && _a !== void 0 ? _a : fileStat.type;
-			if (mimeType === void 0 || mimeType === "") throw new Error("Can not determine mimeType. Please provide mimeType in the config.");
-			fileToUpload.mimeType = mimeType;
-			const uploadUrl = await this.fetchUploadUrl(fileToUpload, config);
-			return uploader.upload(file, uploadUrl, this);
-		}
-		async fetchUploadUrl(file, config) {
-			var _a;
-			let httpOptions = {};
-			if (config === null || config === void 0 ? void 0 : config.httpOptions) httpOptions = config.httpOptions;
-			else httpOptions = {
-				apiVersion: "",
-				headers: {
-					"Content-Type": "application/json",
-					"X-Goog-Upload-Protocol": "resumable",
-					"X-Goog-Upload-Command": "start",
-					"X-Goog-Upload-Header-Content-Length": `${file.sizeBytes}`,
-					"X-Goog-Upload-Header-Content-Type": `${file.mimeType}`
-				}
-			};
-			const body = { "file": file };
-			const httpResponse = await this.request({
-				path: formatMap("upload/v1beta/files", body["_url"]),
-				body: JSON.stringify(body),
-				httpMethod: "POST",
-				httpOptions
-			});
-			if (!httpResponse || !(httpResponse === null || httpResponse === void 0 ? void 0 : httpResponse.headers)) throw new Error("Server did not return an HttpResponse or the returned HttpResponse did not have headers.");
-			const uploadUrl = (_a = httpResponse === null || httpResponse === void 0 ? void 0 : httpResponse.headers) === null || _a === void 0 ? void 0 : _a["x-goog-upload-url"];
-			if (uploadUrl === void 0) throw new Error("Failed to get upload url. Server did not return the x-google-upload-url in the headers");
-			return uploadUrl;
-		}
-	};
-	MAX_CHUNK_SIZE = 1024 * 1024 * 8;
-	BrowserUploader = class {
-		async upload(file, uploadUrl, apiClient) {
-			if (typeof file === "string") throw new Error("File path is not supported in browser uploader.");
-			return await uploadBlob(file, uploadUrl, apiClient);
-		}
-		async stat(file) {
-			if (typeof file === "string") throw new Error("File path is not supported in browser uploader.");
-			else return await getBlobStat(file);
-		}
-	};
-	BrowserWebSocketFactory = class {
-		create(url, headers, callbacks) {
-			return new BrowserWebSocket(url, headers, callbacks);
-		}
-	};
-	BrowserWebSocket = class {
-		constructor(url, headers, callbacks) {
-			this.url = url;
-			this.headers = headers;
-			this.callbacks = callbacks;
-		}
-		connect() {
-			this.ws = new WebSocket(this.url);
-			this.ws.onopen = this.callbacks.onopen;
-			this.ws.onerror = this.callbacks.onerror;
-			this.ws.onclose = this.callbacks.onclose;
-			this.ws.onmessage = this.callbacks.onmessage;
-		}
-		send(message) {
-			if (this.ws === void 0) throw new Error("WebSocket is not connected");
-			this.ws.send(message);
-		}
-		close() {
-			if (this.ws === void 0) throw new Error("WebSocket is not connected");
-			this.ws.close();
-		}
-	};
-	GOOGLE_API_KEY_HEADER = "x-goog-api-key";
-	WebAuth = class {
-		constructor(apiKey) {
-			this.apiKey = apiKey;
-		}
-		async addAuthHeaders(headers) {
-			if (headers.get(GOOGLE_API_KEY_HEADER) !== null) return;
-			headers.append(GOOGLE_API_KEY_HEADER, this.apiKey);
-		}
-	};
-	LANGUAGE_LABEL_PREFIX = "gl-node/";
-	GoogleGenAI = class {
-		constructor(options) {
-			var _a;
-			if (options.apiKey == null) throw new Error("An API Key must be set when running in a browser");
-			if (options.project || options.location) throw new Error("Vertex AI project based authentication is not supported on browser runtimes. Please do not provide a project or location.");
-			this.vertexai = (_a = options.vertexai) !== null && _a !== void 0 ? _a : false;
-			this.apiKey = options.apiKey;
-			this.apiVersion = options.apiVersion;
-			const auth = new WebAuth(this.apiKey);
-			this.apiClient = new ApiClient({
-				auth,
-				apiVersion: this.apiVersion,
-				apiKey: this.apiKey,
-				vertexai: this.vertexai,
-				httpOptions: options.httpOptions,
-				userAgentExtra: LANGUAGE_LABEL_PREFIX + "web",
-				uploader: new BrowserUploader()
-			});
-			this.models = new Models(this.apiClient);
-			this.live = new Live(this.apiClient, auth, new BrowserWebSocketFactory());
-			this.chats = new Chats(this.models, this.apiClient);
-			this.caches = new Caches(this.apiClient);
-			this.files = new Files(this.apiClient);
-			this.operations = new Operations(this.apiClient);
-		}
-	};
-} });
+		this.models = new Models(this.apiClient);
+		this.live = new Live(this.apiClient, auth, new BrowserWebSocketFactory());
+		this.chats = new Chats(this.models, this.apiClient);
+		this.caches = new Caches(this.apiClient);
+		this.files = new Files(this.apiClient);
+		this.operations = new Operations(this.apiClient);
+	}
+};
 
 //#endregion
 //#region src/use-ai.js
-var require_use_ai = __commonJS({ "src/use-ai.js"() {
-	init_web();
-	const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
-	async function main() {
-		const response = await ai.models.generateContent({
-			model: "gemini-2.0-flash",
-			contents: "Provide short example of a feedback to Pull Request - imagine that you are a reviewer."
-		});
-		console.log(response.text);
-	}
-	main();
-} });
+const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+async function main() {
+	const response = await ai.models.generateContent({
+		model: "gemini-2.0-flash",
+		contents: "Provide short example of a feedback to Pull Request - imagine that you are a reviewer."
+	});
+	console.log(response.text);
+}
+main();
 
 //#endregion
-export default require_use_ai();
