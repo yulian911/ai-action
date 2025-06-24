@@ -76466,7 +76466,12 @@ async function run() {
 		console.log(`Found ${files.length} files to process.`);
 		let filesUpdatedCount = 0;
 		const updatedFilesList = [];
-		for (const filePath of files) {
+		for (const [index, filePath] of files.entries()) {
+			if (index > 0) {
+				const delaySeconds = 4;
+				console.log(`Waiting for ${delaySeconds} seconds to avoid API rate limits...`);
+				await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1e3));
+			}
 			console.log(`Processing file: ${filePath}...`);
 			try {
 				const originalContent = await fs_promises.readFile(filePath, "utf8");
