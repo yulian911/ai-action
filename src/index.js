@@ -95,7 +95,16 @@ async function run() {
     const updatedFilesList = []; // Array to hold paths of updated files
 
     // Process each file
-    for (const filePath of files) {
+    for (const [index, filePath] of files.entries()) {
+      // Add a delay before processing the next file (but not the first one)
+      // to avoid hitting the free-tier API rate limit (e.g., 15 requests/min).
+      if (index > 0) {
+        const delaySeconds = 4;
+        console.log(
+          `Waiting for ${delaySeconds} seconds to avoid API rate limits...`
+        );
+        await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+      }
       console.log(`Processing file: ${filePath}...`);
       try {
         const originalContent = await fs.readFile(filePath, "utf8");
