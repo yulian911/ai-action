@@ -24,8 +24,8 @@ export async function updateJSDocs(fileContent, apiKey) {
 
   // Initialize Google AI
   const ai = new GoogleGenAI({apiKey});
+  const model = ai.getGenerativeModel({model: "gemini-pro"});
 
-  // Updated prompt:
   const prompt = `
 You are an AI assistant specialized in JavaScript documentation.
 Your task is to analyze the provided JavaScript code and ensure JSDoc comments are present and accurate for functions, classes, and complex logic blocks. Do not comment self-explanatory code or one-liners.
@@ -43,31 +43,88 @@ JavaScript code:
 ${fileContent}
 \`\`\`
 `;
+  const maxRetries = 3;
+  let attempt = 0;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: prompt,
-  });
-  const updatedContent = response.text;
+  while (attempt < maxRetries) {
+    try {
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const updatedContent = response.text();
 
-  // Basic validation: Check if the response looks like code
-  if (
-    !updatedContent ||
-    (!updatedContent.includes("function") &&
-      !updatedContent.includes("class") &&
-      !updatedContent.includes("const") &&
-      !updatedContent.includes("let"))
-  ) {
-    console.warn(
-      "AI response did not seem like valid code. Returning original content."
-    );
-    return fileContent; // Return original content if response is suspicious
+      // Basic validation: Check if the response looks like code
+      if (
+        !updatedContent ||
+        (!updatedContent.includes("function") &&
+          !updatedContent.includes("class") &&
+          !updatedContent.includes("const") &&
+          !updatedContent.includes("let"))
+      ) {
+        console.warn(
+          "AI response did not seem like valid code. Returning original content."
+        );
+        return fileContent; // Return original content if response is suspicious
+      }
+
+      // Clean up potential markdown code fences if the model added them
+      const cleanedContent = updatedContent
+        .replace(/^```javascript\n/, "")
+        .replace(/\n```$/, "");
+
+      return cleanedContent;
+    } catch (error) {
+      // Check if it's a rate limit error (429)
+      if (error.message && error.message.includes("429 Too Many Requests")) {
+        attempt++;
+        if (attempt >= maxRetries) {
+          throw new Error(
+            `Failed to update JSDocs after ${maxRetries} attempts due to rate limiting. Last error: ${error.message}`
+          );
+        }
+
+        // Default delay if specific value cannot be parsed
+        let retryDelayMs = 60000;
+        const jsonStringMatch = error.message.match(/{.*}/s);
+
+        if (jsonStringMatch) {
+          try {
+            const errorDetails = JSON.parse(jsonStringMatch[0]);
+            const retryInfo = errorDetails.error?.details?.find(
+              detail =>
+                detail["@type"] === "type.googleapis.com/google.rpc.RetryInfo"
+            );
+
+            if (retryInfo && retryInfo.retryDelay) {
+              const delaySeconds = parseInt(
+                retryInfo.retryDelay.replace("s", ""),
+                10
+              );
+              if (!isNaN(delaySeconds)) {
+                retryDelayMs = delaySeconds * 1000;
+              }
+            }
+          } catch (parseError) {
+            console.warn(
+              `Could not parse retry delay from error. Using default of ${
+                retryDelayMs / 1000
+              }s.`
+            );
+          }
+        }
+
+        console.warn(
+          `Rate limit hit. Retrying in ${
+            retryDelayMs / 1000
+          } seconds... (Attempt ${attempt}/${maxRetries})`
+        );
+        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+      } else {
+        // Not a rate limit error, re-throw immediately
+        throw error;
+      }
+    }
   }
-
-  // Clean up potential markdown code fences if the model added them
-  const cleanedContent = updatedContent
-    .replace(/^```javascript\n/, "")
-    .replace(/\n```$/, "");
-
-  return cleanedContent;
+  // This part should not be reached if retries are exhausted and an error is thrown.
+  // Adding it for type safety and to handle unexpected loop exits.
+  return fileContent;
 }
